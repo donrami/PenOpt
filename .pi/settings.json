@@ -8,6 +8,10 @@
     "make-interfaces-feel-better",
     "debugger",
     "quality",
-    "git-workflow-and-versioning"
+    "git-workflow-and-versioning",
+    "golang-patterns",
+    "tdd",
+    "janitor",
+    "design-taste-frontend"
   ]
 }
