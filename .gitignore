@@ -1,0 +1,44 @@
+# --- Project-specific directories (private / research / tooling) ---
+_research/
+_tooling/
+
+# --- Secrets & local config ---
+.env
+.env.*
+*.env
+*.secret
+credentials*
+secrets*
+*.key
+*.pem
+*.cert
+config.local.*
+*.local
+
+# --- Build output ---
+build/bin
+build/*/bin
+
+# --- Dependencies ---
+node_modules/
+frontend/node_modules/
+
+# --- Frontend build ---
+frontend/dist/
+
+# --- Go ---
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+vendor/
+
+# --- OS files ---
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
