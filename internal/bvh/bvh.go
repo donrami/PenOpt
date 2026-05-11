@@ -266,11 +266,13 @@ func normalize(v mesh.Vec3) mesh.Vec3 {
 // Intersect finds the nearest intersection of a ray with the BVH.
 // Returns the distance and triangle index, or false if no hit.
 func (bvh *BVH) Intersect(origin, dir mesh.Vec3) (hit bool, t float64, triIndex int) {
-	hit = false
 	t = 1e30
 	triIndex = -1
 	_intersectNode(bvh.Root, origin, dir, &t, &triIndex, bvh.Triangles)
-	return hit != false, t, triIndex
+	if triIndex >= 0 {
+		return true, t, triIndex
+	}
+	return false, t, triIndex
 }
 
 // _intersectNode recursively traverses the BVH.
