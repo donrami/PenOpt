@@ -13,7 +13,7 @@
     <!-- ═══ HEADER ═══ -->
     <header id="header">
       <div class="header-left">
-        <svg class="header-logo" width="18" height="18" viewBox="0 0 100 100" fill="none"><rect width="100" height="100" rx="20" fill="currentColor"/><text x="50" y="68" font-family="sans-serif" font-size="48" font-weight="bold" fill="white" text-anchor="middle">CT</text></svg>
+        <svg class="header-logo icon--md" viewBox="0 0 100 100" fill="none"><rect width="100" height="100" rx="20" fill="currentColor"/><text x="50" y="68" font-family="sans-serif" font-size="48" font-weight="bold" fill="white" text-anchor="middle">CT</text></svg>
         <h1><span class="accent">Pen</span>Opt</h1>
         <span class="subtitle">CT Scan Orientation Optimizer</span>
       </div>
@@ -27,7 +27,7 @@
 
     <!-- ═══ ERROR BANNER ═══ -->
     <div id="error-banner" class="hidden">
-      <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M7 1a6 6 0 100 12A6 6 0 007 1zm0 3v3m0 1.5v.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      <svg class="icon--xs" viewBox="0 0 14 14" fill="none"><path d="M7 1a6 6 0 100 12A6 6 0 007 1zm0 3v3m0 1.5v.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
       <span id="error-text"></span>
       <button id="btn-error-dismiss">&times;</button>
     </div>
@@ -41,7 +41,7 @@
           <div class="card-head"><span class="step-num">1</span>Upload</div>
           <div class="card-body">
             <div id="drop-zone">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v9M3 5l4-4 4 4M2 10v2h10v-2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <svg class="icon--sm" viewBox="0 0 14 14" fill="none"><path d="M7 1v9M3 5l4-4 4 4M2 10v2h10v-2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
               <div class="dz-label">Drop STL / OBJ</div>
               <div class="dz-formats">Binary/ASCII &middot; Up to 200 MB</div>
               <input type="file" id="file-input" accept=".stl,.obj" hidden />
@@ -242,8 +242,8 @@
 
           <!-- Idle prompt -->
           <div id="idle-prompt">
-            <div class="ip-icon">
-              <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><path d="M16 4v18M8 14l8-8 8 8M4 24v4h24v-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <div class="ip-icon icon--xl">
+              <svg viewBox="0 0 32 32" fill="none"><path d="M16 4v18M8 14l8-8 8 8M4 24v4h24v-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </div>
             <div class="ip-text">Drop your mesh here</div>
             <div class="ip-formats">STL (binary + ASCII) &middot; OBJ &middot; Max 200 MB</div>
