@@ -47,6 +47,7 @@ async function handleFile(file) {
     $('btn-optimize').disabled = false;
     setStatus(`Loaded ${info.numTriangles.toLocaleString()} tris`);
     $('status-mesh').textContent = info.numTriangles.toLocaleString() + ' tris';
+    $('card-tradeoff').classList.add('tradeoff-disabled');
     $('vp-loading').classList.add('hidden');
     // Persist mesh info
     try { localStorage.setItem('penopt-last-mesh', file.name); } catch (_) {}
@@ -74,6 +75,7 @@ export async function handlePickedMesh(info) {
     $('btn-optimize').disabled = false;
     setStatus('Loaded ' + info.numTriangles.toLocaleString() + ' tris');
     $('status-mesh').textContent = info.numTriangles.toLocaleString() + ' tris';
+    $('card-tradeoff').classList.add('tradeoff-disabled');
     try { localStorage.setItem('penopt-last-mesh', info.name); } catch (_) {}
   } catch (err) { showError('Render error: ' + err.message); }
   $('vp-loading').classList.add('hidden');

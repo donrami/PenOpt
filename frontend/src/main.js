@@ -102,7 +102,7 @@ async function init() {
       if (data && data.bestOrientation) {
         $('rs-angle').textContent = '\u03B8=' + data.bestOrientation.theta + '\u00B0 \u03C6=' + data.bestOrientation.phi + '\u00B0';
         $('results').classList.remove('hidden');
-        $('card-tradeoff').style.display = 'block';
+        $('card-tradeoff').classList.remove('tradeoff-disabled');
         setStatus('Restored previous results');
       }
     } catch (_) {}

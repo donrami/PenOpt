@@ -151,8 +151,8 @@ function showResults(result) {
   drawContourPlot(result.allScores, best, worst, result.isPartial);
   drawPenetrationRose(result.penetrationRose, result.worstPenetrationRose, result.isPartial, null, null);
 
-  // Show tradeoff card
-  $('card-tradeoff').style.display = 'block';
+  // Enable tradeoff card
+  $('card-tradeoff').classList.remove('tradeoff-disabled');
 
   // Results visible
   S.facePenetrations = null;
