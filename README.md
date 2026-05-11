@@ -90,20 +90,28 @@ The search starts with a coarse 10° grid over θ ∈ [-45°, 45°] and φ ∈ [
 ```
 penopt/
 ├── main.go                # Wails app entry point
-├── app.go                 # Go backend: mesh loading, optimization, physics API
+├── app.go                 # Thin composition layer for Wails bindings
+├── CONTEXT.md             # Domain glossary (architecture decisions & language)
 ├── frontend/
 │   └── src/
-│       ├── main.js        # Three.js scene, UI wiring, Wails bindings
+│       ├── main.js        # Bootstrap & keyboard shortcuts
+│       ├── state.js       # Shared state object & DOM helpers
+│       ├── scene.js       # Three.js scene, mesh rendering, heatmap, beam viz
+│       ├── filehandler.js # File upload, drag-drop, mesh loading
+│       ├── optimizer.js   # Search lifecycle, results, IntelliScan
+│       ├── materials.js   # Material/filter picker, beam energy
 │       ├── export.js      # JSON / PNG export
 │       ├── plots.js       # Contour & rose canvas plots
 │       └── style.css      # Design system (dark theme)
 ├── internal/
+│   ├── app/               # Focused adapters: MeshLoader, Optimizer, PhysicsAPI, ScannerAPI
 │   ├── bvh/               # Bounding volume hierarchy construction & traversal
-│   ├── mesh/              # STL/OBJ parsers, watertight check
+│   ├── mesh/              # STL/OBJ parsers, watertight check, Vec3 type
 │   ├── objectives/        # f_mtl, f_energy, f_hdn objective functions
 │   ├── physics/           # NIST XCOM materials, beam filters, effective energy
 │   ├── raycaster/         # BVH-accelerated ray casting & transmission lengths
-│   └── search/            # Coarse→fine grid search, IntelliScan
+│   ├── search/            # Coarse→fine grid search, IntelliScan
+│   └── vec/               # Shared 3D vector math (Dot, Cross, Sub, Normalize, Rotate)
 └── build/                 # Platform-specific build assets & icons
 ```
 
