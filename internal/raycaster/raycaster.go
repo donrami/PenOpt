@@ -51,6 +51,33 @@ type OrientationResult struct {
 	BuildTimeMs       float64
 }
 
+// RayGrid is a pre-computed grid of detector pixel positions.
+type RayGrid struct {
+	Pixels  []struct{ Px, Py int }
+	NumRays int
+}
+
+// ComputeRayGrid pre-computes the ray grid positions from a ScannerConfig.
+func ComputeRayGrid(cfg ScannerConfig) RayGrid {
+	stepX := float64(cfg.DetPixelsX+1) / float64(cfg.RayGridX+1)
+	stepY := float64(cfg.DetPixelsY+1) / float64(cfg.RayGridY+1)
+	pixels := make([]struct{ Px, Py int }, 0, cfg.RayGridX*cfg.RayGridY)
+	for iy := 0; iy < cfg.RayGridY; iy++ {
+		py := int(stepY * float64(iy+1))
+		if py >= cfg.DetPixelsY {
+			py = cfg.DetPixelsY - 1
+		}
+		for ix := 0; ix < cfg.RayGridX; ix++ {
+			px := int(stepX * float64(ix+1))
+			if px >= cfg.DetPixelsX {
+				px = cfg.DetPixelsX - 1
+			}
+			pixels = append(pixels, struct{ Px, Py int }{px, py})
+		}
+	}
+	return RayGrid{Pixels: pixels, NumRays: len(pixels)}
+}
+
 // MIN_SEGMENT is the minimum segment length to count (avoids noise from coplanar tris).
 const MIN_SEGMENT = 0.01
 
@@ -107,31 +134,13 @@ func rotateY(v mesh.Vec3, angle float64) mesh.Vec3 {
 // ComputeTransmissionLengths computes X-ray transmission lengths for one orientation.
 // This is the core computation: project rays through the mesh at N projection angles,
 // measuring the total path length through solid material for each ray.
-func ComputeTransmissionLengths(theta, phi float64, bvhTree *bvh.BVH, cfg ScannerConfig) OrientationResult {
+func ComputeTransmissionLengths(theta, phi float64, bvhTree *bvh.BVH, cfg ScannerConfig, grid RayGrid) OrientationResult {
 	t0 := time.Now()
 
 	thetaRad := theta * math.Pi / 180
 	phiRad := phi * math.Pi / 180
 
-	// Pre-compute grid pixel positions
-	type gridPixel struct{ px, py int }
-	gridPixels := make([]gridPixel, 0, cfg.RayGridX*cfg.RayGridY)
-	stepX := float64(cfg.DetPixelsX+1) / float64(cfg.RayGridX+1)
-	stepY := float64(cfg.DetPixelsY+1) / float64(cfg.RayGridY+1)
-	for iy := 0; iy < cfg.RayGridY; iy++ {
-		py := int(stepY * float64(iy+1))
-		if py >= cfg.DetPixelsY {
-			py = cfg.DetPixelsY - 1
-		}
-		for ix := 0; ix < cfg.RayGridX; ix++ {
-			px := int(stepX * float64(ix+1))
-			if px >= cfg.DetPixelsX {
-				px = cfg.DetPixelsX - 1
-			}
-			gridPixels = append(gridPixels, gridPixel{px, py})
-		}
-	}
-	raysPerProj := len(gridPixels)
+	raysPerProj := grid.NumRays
 
 	// Pre-compute the orientation rotation (applied to the geometry, i.e., to each ray)
 	// We rotate the mesh by (theta, phi) and then each projection by alpha.
@@ -159,7 +168,7 @@ func ComputeTransmissionLengths(theta, phi float64, bvhTree *bvh.BVH, cfg Scanne
 			offset := alpha * raysPerProj
 
 			for ri := 0; ri < raysPerProj; ri++ {
-				worldOrigin, worldDir := pixelToRay(gridPixels[ri].px, gridPixels[ri].py, cfg)
+				worldOrigin, worldDir := pixelToRay(grid.Pixels[ri].Px, grid.Pixels[ri].Py, cfg)
 
 				localOrigin := worldOrigin
 				localDir := worldDir

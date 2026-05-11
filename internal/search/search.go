@@ -58,7 +58,8 @@ type Result struct {
 
 // EvaluateSingle evaluates a single orientation (for UI preview / heatmap).
 func EvaluateSingle(bvhTree *bvh.BVH, theta, phi float64, cfg raycaster.ScannerConfig) OrientationScore {
-	result := raycaster.ComputeTransmissionLengths(theta, phi, bvhTree, cfg)
+	grid := raycaster.ComputeRayGrid(cfg)
+	result := raycaster.ComputeTransmissionLengths(theta, phi, bvhTree, cfg, grid)
 	fMtl := objectives.FMtl(result.Lengths, 3)
 	fEnergy := objectives.FEnergy(result.Lengths)
 	fHdn := objectives.FHdn(result.MaxPerProjection)
@@ -94,7 +95,8 @@ func Run(bvhTree *bvh.BVH, cfg raycaster.ScannerConfig,
 		}
 	}
 
-	coarseScores := evaluateOrientations(bvhTree, coarseOrientations, cfg, weights, method, onProgress, 0, len(coarseOrientations))
+	grid := raycaster.ComputeRayGrid(cfg)
+	coarseScores := evaluateOrientations(bvhTree, coarseOrientations, cfg, grid, weights, method, onProgress, 0, len(coarseOrientations))
 
 	if len(coarseScores) < 2 {
 		return nil, nil
@@ -161,7 +163,8 @@ func Run(bvhTree *bvh.BVH, cfg raycaster.ScannerConfig,
 		}
 	}
 
-	fineScores := evaluateOrientations(bvhTree, fineOrientations, fineCfg, weights, method, onProgress, len(coarseOrientations), len(coarseOrientations)+len(fineOrientations))
+	fineGrid := raycaster.ComputeRayGrid(fineCfg)
+	fineScores := evaluateOrientations(bvhTree, fineOrientations, fineCfg, fineGrid, weights, method, onProgress, len(coarseOrientations), len(coarseOrientations)+len(fineOrientations))
 
 	// ── Combine results ──
 	allScores := append(coarseScores, fineScores...)
@@ -200,13 +203,14 @@ func Run(bvhTree *bvh.BVH, cfg raycaster.ScannerConfig,
 func evaluateOrientations(bvhTree *bvh.BVH,
 	orientations []Orient,
 	cfg raycaster.ScannerConfig,
+	grid raycaster.RayGrid,
 	weights [3]float64, method string,
 	onProgress ProgressFn, baseIdx, total int) []OrientationScore {
 
 	scores := make([]OrientationScore, 0, len(orientations))
 
 	for i, o := range orientations {
-		result := raycaster.ComputeTransmissionLengths(o.Theta, o.Phi, bvhTree, cfg)
+		result := raycaster.ComputeTransmissionLengths(o.Theta, o.Phi, bvhTree, cfg, grid)
 		fMtl := objectives.FMtl(result.Lengths, 3)
 		fEnergy := objectives.FEnergy(result.Lengths)
 		fHdn := objectives.FHdn(result.MaxPerProjection)
