@@ -118,7 +118,7 @@ html, body { height: 100%; overflow: hidden; font-family: var(--font); backgroun
   width: 18px; height: 18px; border-radius: 50%; background: var(--accent-tint);
   color: var(--accent); font-size: 10px; font-weight: 700;
 }
-.card-body { padding: var(--space-2); font-size: 12px; }
+.card-body { padding: var(--space-2); font-size: 13px; }
 
 /* Drop zone */
 #drop-zone {
