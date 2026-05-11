@@ -7,7 +7,18 @@ export function initScene() {
   const c = $('viewport');
   const w = c.clientWidth, h = c.clientHeight;
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x0c0e14);
+  // Subtle gradient background
+  const bgCanvas = document.createElement('canvas');
+  bgCanvas.width = 2; bgCanvas.height = 256;
+  const bgCtx = bgCanvas.getContext('2d');
+  const bgGrad = bgCtx.createLinearGradient(0, 0, 0, 256);
+  bgGrad.addColorStop(0, '#0a0c12');
+  bgGrad.addColorStop(0.5, '#0c0e14');
+  bgGrad.addColorStop(1, '#11131c');
+  bgCtx.fillStyle = bgGrad; bgCtx.fillRect(0, 0, 2, 256);
+  const bgTexture = new THREE.CanvasTexture(bgCanvas);
+  bgTexture.magFilter = THREE.LinearFilter;
+  scene.background = bgTexture;
   const camera = new THREE.PerspectiveCamera(45, w / h, 1, 10000);
   camera.position.set(300, 200, 400);
   const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -16,20 +27,69 @@ export function initScene() {
   c.appendChild(renderer.domElement);
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true; controls.dampingFactor = 0.08; controls.target.set(0, 0, 0);
-  scene.add(new THREE.AmbientLight(0x404060, 0.5));
-  const d1 = new THREE.DirectionalLight(0xffffff, 0.8); d1.position.set(200, 300, 400); scene.add(d1);
-  const d2 = new THREE.DirectionalLight(0x6688cc, 0.3); d2.position.set(-200, -100, -300); scene.add(d2);
-  scene.add(new THREE.GridHelper(800, 20, 0x2a2d3e, 0x1e2130));
-  scene.add(new THREE.AxesHelper(200));
+  scene.add(new THREE.AmbientLight(0x404060, 0.6));
+  scene.add(new THREE.HemisphereLight(0x6088cc, 0x302040, 0.4));
+  const d1 = new THREE.DirectionalLight(0xffffff, 0.9); d1.position.set(200, 300, 400); scene.add(d1);
+  const d2 = new THREE.DirectionalLight(0x6688cc, 0.35); d2.position.set(-200, -100, -300); scene.add(d2);
+  const grid = new THREE.GridHelper(800, 20, 0x2a2d3e, 0x1e2130);
+  grid.material.transparent = true;
+  grid.material.opacity = 0.6;
+  scene.add(grid);
+  scene.add(new THREE.AxesHelper(150));
   S.scene = scene; S.camera = camera; S.renderer = renderer; S.controls = controls;
-  animate();
+
+  // Render on demand — only when controls change or programmatic updates
+  function render() { if (S.renderer) S.renderer.render(S.scene, S.camera); }
+  controls.addEventListener('change', render);
+  S.renderScene = render;
+  render();
 }
 
-function animate() { S.animFrame = requestAnimationFrame(animate); S.controls?.update(); S.renderer?.render(S.scene, S.camera); }
+export function resizeViewport() { if (!S.renderer) return; const c = $('viewport'); S.camera.aspect = c.clientWidth / c.clientHeight; S.camera.updateProjectionMatrix(); S.renderer.setSize(c.clientWidth, c.clientHeight); S.renderScene?.(); }
 
-export function resizeViewport() { if (!S.renderer) return; const c = $('viewport'); S.camera.aspect = c.clientWidth / c.clientHeight; S.camera.updateProjectionMatrix(); S.renderer.setSize(c.clientWidth, c.clientHeight); }
+export function resetCamera() { if (!S.camera) return; S.camera.position.set(300, 200, 400); S.controls.target.set(0, 0, 0); S.controls.update(); S.renderScene?.(); }
 
-export function resetCamera() { if (!S.camera) return; S.camera.position.set(300, 200, 400); S.controls.target.set(0, 0, 0); S.controls.update(); }
+// ── Smooth Rotation Animation ──
+// Animates mesh rotation from current angles to target over `duration` ms.
+// Uses ease-out cubic for natural deceleration.
+let _rotationAnimId = null;
+
+export function animateRotation(mesh, targetTheta, targetPhi, duration = 400) {
+  if (!mesh) return;
+  // Cancel any in-progress rotation
+  if (_rotationAnimId) { cancelAnimationFrame(_rotationAnimId); _rotationAnimId = null; }
+
+  const startTheta = mesh.rotation.x;
+  const startPhi = mesh.rotation.y;
+  const deltaTheta = targetTheta - startTheta;
+  const deltaPhi = targetPhi - startPhi;
+  // Shortest path for phi (handle wraparound)
+  let dPhi = targetPhi - startPhi;
+  if (dPhi > Math.PI) dPhi -= Math.PI * 2;
+  else if (dPhi < -Math.PI) dPhi += Math.PI * 2;
+
+  const startTime = performance.now();
+
+  function tick(now) {
+    const elapsed = now - startTime;
+    const t = Math.min(elapsed / duration, 1);
+    // Ease-out cubic: 1 - (1 - t)^3
+    const e = 1 - Math.pow(1 - t, 3);
+
+    mesh.rotation.x = startTheta + deltaTheta * e;
+    mesh.rotation.y = startPhi + dPhi * e;
+
+    if (t < 1) {
+      _rotationAnimId = requestAnimationFrame(tick);
+    } else {
+      mesh.rotation.x = targetTheta;
+      mesh.rotation.y = targetPhi;
+      _rotationAnimId = null;
+    }
+  }
+
+  _rotationAnimId = requestAnimationFrame(tick);
+}
 
 // ── Mesh Rendering ──
 export function renderMesh(verts) {
@@ -42,12 +102,21 @@ export function renderMesh(verts) {
   for (let i = 0; i < nt; i++) { idx[i*3] = i*3; idx[i*3+1] = i*3+1; idx[i*3+2] = i*3+2; }
   geo.setIndex(new THREE.BufferAttribute(idx, 1)); geo.computeVertexNormals(); geo.computeBoundingBox();
   const center = new THREE.Vector3(); geo.boundingBox.getCenter(center); geo.translate(-center.x, -center.y, -center.z);
-  const mat = new THREE.MeshStandardMaterial({ color: 0x3b82f6, metalness: 0.3, roughness: 0.6, side: THREE.DoubleSide });
+  const mat = new THREE.MeshPhysicalMaterial({
+    color: 0x3b82f6,
+    metalness: 0.35,
+    roughness: 0.55,
+    clearcoat: 0.15,
+    clearcoatRoughness: 0.4,
+    envMapIntensity: 0.6,
+    side: THREE.DoubleSide,
+  });
   const mesh = new THREE.Mesh(geo, mat); S.scene.add(mesh); S.meshObject = mesh;
   const box = new THREE.Box3().setFromObject(mesh); const sz = box.getSize(new THREE.Vector3());
   const dist = Math.max(sz.x, sz.y, sz.z) * 1.8;
   S.camera.position.set(dist * 0.6, dist * 0.4, dist * 0.8); S.controls.target.set(0, 0, 0); S.controls.update();
   $('btn-reset-float').classList.remove('hidden');
+  S.renderScene?.();
 }
 
 // ── Heatmap ──
@@ -86,11 +155,12 @@ export function applyHeatmap() {
     gCtx.fillStyle = grad; gCtx.fillRect(0, 0, 80, 8);
     $('legend-gradient').style.background = `url(${gCv.toDataURL()})`;
     $('heatmap-legend').classList.remove('hidden');
-    if (S.result) { S.meshObject.rotation.x = S.result.bestOrientation.theta * DEG; S.meshObject.rotation.y = S.result.bestOrientation.phi * DEG; }
+    if (S.result) { animateRotation(S.meshObject, S.result.bestOrientation.theta * DEG, S.result.bestOrientation.phi * DEG, 300); }
   } else {
     if (Array.isArray(S.meshObject.material)) { S.meshObject.material.forEach(m => { m.color.setHex(0x3b82f6); m.vertexColors = false; m.needsUpdate = true; }); }
     else { S.meshObject.material.color.setHex(0x3b82f6); S.meshObject.material.vertexColors = false; S.meshObject.material.needsUpdate = true; }
   }
+  S.renderScene?.();
 }
 
 // ── Compare Mode ──
@@ -123,6 +193,7 @@ export function enterCompareMode() {
   S.scene.add(S.meshClone);
   S.compareMode = true;
   $('compare-info').classList.remove('hidden');
+  S.renderScene?.();
 }
 
 export function exitCompareMode() {
@@ -143,6 +214,7 @@ export function exitCompareMode() {
     S.meshObject.material.depthWrite = true;
     S.meshObject.material.needsUpdate = true;
   }
+  S.renderScene?.();
 }
 
 // ── View Modes ──
@@ -157,7 +229,7 @@ export function switchViewMode(mode) {
     } else {
       S.meshObject.material.color.setHex(0x3b82f6); S.meshObject.material.vertexColors = false; S.meshObject.material.needsUpdate = true;
     }
-    if (S.result) { S.meshObject.rotation.x = S.result.bestOrientation.theta * DEG; S.meshObject.rotation.y = S.result.bestOrientation.phi * DEG; }
+    if (S.result) { animateRotation(S.meshObject, S.result.bestOrientation.theta * DEG, S.result.bestOrientation.phi * DEG, 300); }
   }
   if (mode === 'heatmap') applyHeatmap();
   if (mode === 'compare') enterCompareMode();
@@ -285,6 +357,7 @@ export function createBeamVisualization() {
 
   S.scene.add(S.beamGroup);
   S.beamGroup.visible = S.beamVisible;
+  S.renderScene?.();
 }
 
 export function destroyBeamVisualization() {
@@ -300,4 +373,5 @@ export function destroyBeamVisualization() {
     }
   });
   S.beamGroup = null;
+  S.renderScene?.();
 }

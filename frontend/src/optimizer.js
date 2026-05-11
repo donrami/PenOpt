@@ -1,6 +1,6 @@
 // Optimizer — search lifecycle, progress, results, IntelliScan, heatmap loading
 import { S, $, qsa, DEG, WEIGHT_PRESETS, showError, setStatus } from './state.js';
-import { applyHeatmap } from './scene.js';
+import { applyHeatmap, animateRotation } from './scene.js';
 import { recalcBeam } from './materials.js';
 import { RunOptimization, ComputeFaceHeatmap, CalcEnergyRecommendation } from '../wailsjs/go/main/App';
 import { drawContourPlot, drawPenetrationRose } from './plots.js';
@@ -142,9 +142,9 @@ function showResults(result) {
     $('energy-caveat').textContent = 'Qualitative estimate. Actual consumption depends on scanner hardware.';
   }).catch(() => {});
 
-  // Rotate mesh
+  // Smoothly rotate mesh to optimal orientation
   if (S.meshObject) {
-    S.meshObject.rotation.x = best.theta * DEG; S.meshObject.rotation.y = best.phi * DEG;
+    animateRotation(S.meshObject, best.theta * DEG, best.phi * DEG);
   }
 
   // Draw plots

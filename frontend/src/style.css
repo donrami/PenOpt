@@ -83,11 +83,8 @@ html, body {
 .accent { color: var(--accent); }
 
 /* ── Scrollbar Styling ── */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--border-light); }
-::-webkit-scrollbar-corner { background: transparent; }
+/* Standard scrollbar styling (Firefox, Chrome 131+) */
+* { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
 
 /* ── Typography Helpers ── */
 .font-mono { font-family: var(--mono); }
@@ -175,9 +172,6 @@ html, body {
   border-right: 1px solid var(--border);
   overflow-y: auto;
   overflow-x: hidden;
-  scrollbar-gutter: stable;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
   display: flex;
   flex-direction: column;
   gap: var(--sp-2);
@@ -186,6 +180,7 @@ html, body {
 
 /* ── CARDS (Sidebar) ── */
 .card {
+  width: 100%;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -323,12 +318,14 @@ html, body {
 }
 #mat-search:focus { outline: none; border-color: var(--accent); }
 
-/* Material grid — let sidebar handle scrolling */
+/* Material grid — scrollable with max-height */
 #mat-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 2px;
-  /* No fixed max-height — sidebar scrolls instead */
+  max-height: 240px;
+  overflow-y: auto;
+  padding-right: 2px;
 }
 .mat-item {
   display: flex;
@@ -656,9 +653,8 @@ input[type="range"] {
   top: 0; left: 0; right: 0;
   z-index: 10;
   padding: var(--sp-2) var(--sp-3);
-  background: var(--amber-tint);
+  background: rgba(245, 158, 11, 0.12);
   border-bottom: 1px solid rgba(245, 158, 11, 0.3);
-  backdrop-filter: blur(8px);
   font-size: 10px;
   color: var(--amber-500);
   font-weight: 600;
@@ -701,13 +697,12 @@ input[type="range"] {
   height: 30px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: rgba(26, 29, 43, 0.9);
+  background: var(--bg3);
   color: var(--text-dim);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  backdrop-filter: blur(4px);
   box-shadow: var(--shadow-md);
   transition: background 120ms, color 120ms, border-color 120ms;
 }
@@ -767,11 +762,10 @@ input[type="range"] {
   display: flex;
   align-items: center;
   gap: var(--sp-2);
-  background: rgba(12, 14, 20, 0.9);
+  background: rgba(12, 14, 20, 0.92);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   padding: var(--sp-2) var(--sp-3);
-  backdrop-filter: blur(4px);
 }
 #heatmap-legend.hidden { display: none; }
 .legend-gradient { width: 100px; height: 10px; border-radius: 2px; }
@@ -784,7 +778,7 @@ input[type="range"] {
   left: 50%;
   transform: translateX(-50%);
   z-index: 10;
-  background: rgba(12, 14, 20, 0.9);
+  background: rgba(12, 14, 20, 0.92);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: var(--sp-1) var(--sp-3);
@@ -793,7 +787,6 @@ input[type="range"] {
   display: flex;
   align-items: center;
   gap: var(--sp-3);
-  backdrop-filter: blur(4px);
 }
 #compare-info.hidden { display: none; }
 .ci-swatch { width: 12px; height: 8px; border-radius: 2px; }
@@ -883,7 +876,6 @@ input[type="range"] {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  overflow: hidden;
   box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
@@ -903,7 +895,6 @@ input[type="range"] {
 
 .rc-body {
   padding: var(--sp-3);
-  overflow-y: auto;
   flex: 1;
 }
 
@@ -1133,6 +1124,43 @@ input[type="range"] {
   :root { --sidebar-w: 240px; }
   #results-grid { grid-template-columns: 1fr; }
   #results-summary { flex-wrap: wrap; gap: var(--sp-2); }
+}
+
+/* ── Tooltips ── */
+[data-tip] {
+  position: relative;
+  cursor: help;
+}
+[data-tip]:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  font-size: 10px;
+  font-weight: 500;
+  font-family: var(--font);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 200;
+  box-shadow: var(--shadow-lg);
+  line-height: 1.4;
+}
+[data-tip]:hover::before {
+  content: '';
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 4px solid transparent;
+  border-top-color: var(--border-light);
+  pointer-events: none;
+  z-index: 200;
 }
 
 /* ── Focus Visible ── */
