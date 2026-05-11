@@ -14,13 +14,22 @@ import (
 	"penopt/internal/raycaster"
 )
 
-// CoarseThetas are the coarse tilt angles around X (degrees).
+// coarseThetas are the coarse tilt angles around X (degrees).
 // Matches the original: 7 values at 15° spacing.
-var CoarseThetas = []float64{-45, -30, -15, 0, 15, 30, 45}
+var coarseThetas = []float64{-45, -30, -15, 0, 15, 30, 45}
 
-// CoarsePhis are the coarse tilt angles around Y (degrees).
+// coarsePhis are the coarse tilt angles around Y (degrees).
 // Matches the original: 7 values at 15° spacing.
-var CoarsePhis = []float64{-45, -30, -15, 0, 15, 30, 45}
+var coarsePhis = []float64{-45, -30, -15, 0, 15, 30, 45}
+
+// DefaultSearchGrid returns a copy of the default coarse search grid.
+func DefaultSearchGrid() (thetas, phis []float64) {
+	thetas = make([]float64, len(coarseThetas))
+	phis = make([]float64, len(coarsePhis))
+	copy(thetas, coarseThetas)
+	copy(phis, coarsePhis)
+	return
+}
 
 // Orient is an orientation (θ, φ) in degrees.
 type Orient struct {
@@ -78,9 +87,9 @@ func Run(bvhTree *bvh.BVH, cfg raycaster.ScannerConfig,
 	startTime := time.Now()
 
 	// ── Phase 1: Coarse search ──
-	coarseOrientations := make([]Orient, 0, len(CoarseThetas)*len(CoarsePhis))
-	for _, theta := range CoarseThetas {
-		for _, phi := range CoarsePhis {
+	coarseOrientations := make([]Orient, 0, len(coarseThetas)*len(coarsePhis))
+	for _, theta := range coarseThetas {
+		for _, phi := range coarsePhis {
 			coarseOrientations = append(coarseOrientations, Orient{theta, phi})
 		}
 	}
@@ -136,8 +145,8 @@ func Run(bvhTree *bvh.BVH, cfg raycaster.ScannerConfig,
 	fineOrientations := make([]Orient, 0, len(fineSet))
 	for key := range fineSet {
 		isCoarse := false
-		for _, ct := range CoarseThetas {
-			for _, cp := range CoarsePhis {
+		for _, ct := range coarseThetas {
+			for _, cp := range coarsePhis {
 				if math.Abs(key[0]-ct) < 0.5 && math.Abs(key[1]-cp) < 0.5 {
 					isCoarse = true
 					break
