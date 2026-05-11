@@ -183,34 +183,38 @@
       <main id="viewport-area">
         <!-- Viewport header bar -->
         <div id="vp-header">
-          <button class="btn btn-primary" id="btn-optimize" disabled>&#x25B6; <span>Optimize</span></button>
-          <div class="vp-progress hidden" id="vp-progress">
-            <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
-            <span class="progress-label" id="progress-label">0%</span>
-            <button class="btn btn-stop" id="btn-stop">&#x25A0; Stop</button>
+          <div class="vp-header-row vp-header-row--main">
+            <button class="btn btn-primary" id="btn-optimize" disabled>&#x25B6; <span>Optimize</span></button>
+            <div class="vp-progress hidden" id="vp-progress">
+              <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+              <span class="progress-label" id="progress-label">0%</span>
+              <button class="btn btn-stop" id="btn-stop">&#x25A0; Stop</button>
+            </div>
+            <span style="flex:1"></span>
+            <span class="hud-rot hidden" id="hud-rot">&theta;: 0&deg; &phi;: 0&deg;</span>
+            <div class="vp-mode-group" id="vp-mode-group">
+              <button class="vp-mode-btn active" data-mode="3d" data-tip="Default mesh view">3D</button>
+              <button class="vp-mode-btn" data-mode="heatmap" data-tip="Color faces by penetration">Heat</button>
+              <button class="vp-mode-btn" data-mode="compare" data-tip="Ghost overlay compare">Cmp</button>
+            </div>
+            <div class="vp-layout-group" id="vp-layout-group">
+              <button class="vp-layout-btn active" data-layout="default" data-tip="Default layout">D</button>
+              <button class="vp-layout-btn" data-layout="viewport" data-tip="Full viewport">V</button>
+              <button class="vp-layout-btn" data-layout="results" data-tip="Full results">R</button>
+            </div>
           </div>
-          <span style="flex:1"></span>
-          <span class="hud-rot hidden" id="hud-rot">&theta;: 0&deg; &phi;: 0&deg;</span>
-          <div class="vp-mode-group" id="vp-mode-group">
-            <button class="vp-mode-btn active" data-mode="3d" data-tip="Default mesh view">3D</button>
-            <button class="vp-mode-btn" data-mode="heatmap" data-tip="Color faces by penetration">Heat</button>
-            <button class="vp-mode-btn" data-mode="compare" data-tip="Ghost overlay compare">Cmp</button>
+          <div class="vp-header-row vp-header-row--actions">
+            <span class="vp-actions">
+              <button class="icon-btn" id="btn-reset-cam" data-tip="Reset camera (R)">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 8a6 6 0 0111.2-2.8M14 8a6 6 0 01-11.2 2.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M13 2v3h-3M3 14v-3h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </button>
+              <button class="icon-btn" id="btn-labels" data-tip="Toggle 3D labels"><span style="font-size:9px;font-weight:700">LBL</span></button>
+              <button class="icon-btn" id="btn-beam" data-tip="Toggle beam geometry"><span style="font-size:11px;font-weight:600">BEAM</span></button>
+              <button class="icon-btn" id="btn-fullscreen" data-tip="Fullscreen (F)">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 5V2h3M9 2h3v3M12 9v3H9M5 12H2V9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+              </button>
+            </span>
           </div>
-          <div class="vp-layout-group" id="vp-layout-group">
-            <button class="vp-layout-btn active" data-layout="default" data-tip="Default layout">D</button>
-            <button class="vp-layout-btn" data-layout="viewport" data-tip="Full viewport">V</button>
-            <button class="vp-layout-btn" data-layout="results" data-tip="Full results">R</button>
-          </div>
-          <span class="vp-actions">
-            <button class="icon-btn" id="btn-reset-cam" data-tip="Reset camera (R)">
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 8a6 6 0 0111.2-2.8M14 8a6 6 0 01-11.2 2.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M13 2v3h-3M3 14v-3h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </button>
-            <button class="icon-btn" id="btn-labels" data-tip="Toggle 3D labels"><span style="font-size:9px;font-weight:700">LBL</span></button>
-            <button class="icon-btn" id="btn-beam" data-tip="Toggle beam geometry"><span style="font-size:11px;font-weight:600">BEAM</span></button>
-            <button class="icon-btn" id="btn-fullscreen" data-tip="Fullscreen (F)">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 5V2h3M9 2h3v3M12 9v3H9M5 12H2V9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-            </button>
-          </span>
         </div>
 
         <!-- 3D Viewport -->
