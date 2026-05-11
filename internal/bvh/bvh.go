@@ -7,6 +7,7 @@ import (
 	"sort"
 
 	"penopt/internal/mesh"
+	"penopt/internal/vec"
 )
 
 const (
@@ -192,9 +193,9 @@ func RayTriangleIntersect(origin, dir mesh.Vec3, tri mesh.Triangle) (hit bool, t
 	edge2 := mesh.Vec3{X: tri.V2.X - tri.V0.X, Y: tri.V2.Y - tri.V0.Y, Z: tri.V2.Z - tri.V0.Z}
 
 	// h = D × edge2
-	h := cross(dir, edge2)
+	h := vec.Cross(dir, edge2)
 	// a = edge1 · h
-	a := dot(edge1, h)
+	a := vec.Dot(edge1, h)
 
 	// If determinant is near zero, ray lies in plane of triangle
 	if math.Abs(a) < Epsilon {
@@ -204,25 +205,25 @@ func RayTriangleIntersect(origin, dir mesh.Vec3, tri mesh.Triangle) (hit bool, t
 	f := 1.0 / a
 
 	// S = O - V0
-	s := sub(origin, tri.V0)
+	s := vec.Sub(origin, tri.V0)
 
 	// u = (S · h) / a
-	u := dot(s, h) * f
+	u := vec.Dot(s, h) * f
 	if u < 0 || u > 1 {
 		return false, 0
 	}
 
 	// q = S × edge1
-	q := cross(s, edge1)
+	q := vec.Cross(s, edge1)
 
 	// v = (D · q) / a
-	v := dot(dir, q) * f
+	v := vec.Dot(dir, q) * f
 	if v < 0 || u+v > 1 {
 		return false, 0
 	}
 
 	// t = (edge2 · q) / a
-	t = dot(edge2, q) * f
+	t = vec.Dot(edge2, q) * f
 
 	if t < Epsilon {
 		return false, 0
@@ -231,35 +232,7 @@ func RayTriangleIntersect(origin, dir mesh.Vec3, tri mesh.Triangle) (hit bool, t
 	return true, t
 }
 
-// ── Vector helpers (inline) ──
-
-func dot(a, b mesh.Vec3) float64 {
-	return a.X*b.X + a.Y*b.Y + a.Z*b.Z
-}
-
-func cross(a, b mesh.Vec3) mesh.Vec3 {
-	return mesh.Vec3{X: a.Y*b.Z - a.Z*b.Y, Y: a.Z*b.X - a.X*b.Z, Z: a.X*b.Y - a.Y*b.X}
-}
-
-func sub(a, b mesh.Vec3) mesh.Vec3 {
-	return mesh.Vec3{X: a.X - b.X, Y: a.Y - b.Y, Z: a.Z - b.Z}
-}
-
-func add(a, b mesh.Vec3) mesh.Vec3 {
-	return mesh.Vec3{X: a.X + b.X, Y: a.Y + b.Y, Z: a.Z + b.Z}
-}
-
-func mul(v mesh.Vec3, s float64) mesh.Vec3 {
-	return mesh.Vec3{X: v.X * s, Y: v.Y * s, Z: v.Z * s}
-}
-
-func normalize(v mesh.Vec3) mesh.Vec3 {
-	l := math.Sqrt(v.X*v.X + v.Y*v.Y + v.Z*v.Z)
-	if l < Epsilon {
-		return v
-	}
-	return mesh.Vec3{X: v.X / l, Y: v.Y / l, Z: v.Z / l}
-}
+// Vector helpers removed — use vec.Dot, vec.Cross, etc. from penopt/internal/vec
 
 // ── BVH traversal ──
 

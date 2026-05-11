@@ -10,6 +10,7 @@ import (
 
 	"penopt/internal/bvh"
 	"penopt/internal/mesh"
+	"penopt/internal/vec"
 )
 
 // ScannerConfig holds CT scanner geometry parameters.
@@ -91,45 +92,11 @@ func pixelToRay(px, py int, cfg ScannerConfig) (origin, dir mesh.Vec3) {
 
 	origin = mesh.Vec3{X: -sod, Y: 0, Z: 0}
 	dir = mesh.Vec3{X: sdd - sod, Y: dy, Z: dz}
-	dir = normalize(dir)
+	dir = vec.Normalize(dir)
 	return
 }
 
-func normalize(v mesh.Vec3) mesh.Vec3 {
-	l := math.Sqrt(v.X*v.X + v.Y*v.Y + v.Z*v.Z)
-	if l < 1e-12 {
-		return v
-	}
-	return mesh.Vec3{X: v.X / l, Y: v.Y / l, Z: v.Z / l}
-}
-
-func sub(a, b mesh.Vec3) mesh.Vec3 {
-	return mesh.Vec3{X: a.X - b.X, Y: a.Y - b.Y, Z: a.Z - b.Z}
-}
-
-// ── Rotation helpers ──
-
-// rotateX returns a Vec3 rotated around the X axis by angle radians.
-func rotateX(v mesh.Vec3, angle float64) mesh.Vec3 {
-	c := math.Cos(angle)
-	s := math.Sin(angle)
-	return mesh.Vec3{
-		X: v.X,
-		Y: v.Y*c - v.Z*s,
-		Z: v.Y*s + v.Z*c,
-	}
-}
-
-// rotateY returns a Vec3 rotated around the Y axis by angle radians.
-func rotateY(v mesh.Vec3, angle float64) mesh.Vec3 {
-	c := math.Cos(angle)
-	s := math.Sin(angle)
-	return mesh.Vec3{
-		X: v.X*c + v.Z*s,
-		Y: v.Y,
-		Z: -v.X*s + v.Z*c,
-	}
-}
+// Vector helpers removed — use vec.Normalize, vec.Sub, vec.RotateX, vec.RotateY from penopt/internal/vec
 
 // ComputeTransmissionLengths computes X-ray transmission lengths for one orientation.
 // This is the core computation: project rays through the mesh at N projection angles,
@@ -173,13 +140,13 @@ func ComputeTransmissionLengths(theta, phi float64, bvhTree *bvh.BVH, cfg Scanne
 				localOrigin := worldOrigin
 				localDir := worldDir
 
-				localOrigin = rotateY(localOrigin, -alphaRad)
-				localDir = rotateY(localDir, -alphaRad)
-				localOrigin = rotateY(localOrigin, -phiRad)
-				localDir = rotateY(localDir, -phiRad)
-				localOrigin = rotateX(localOrigin, -thetaRad)
-				localDir = rotateX(localDir, -thetaRad)
-				localDir = normalize(localDir)
+				localOrigin = vec.RotateY(localOrigin, -alphaRad)
+				localDir = vec.RotateY(localDir, -alphaRad)
+				localOrigin = vec.RotateY(localOrigin, -phiRad)
+				localDir = vec.RotateY(localDir, -phiRad)
+				localOrigin = vec.RotateX(localOrigin, -thetaRad)
+				localDir = vec.RotateX(localDir, -thetaRad)
+				localDir = vec.Normalize(localDir)
 
 				hits, _ := bvhTree.IntersectAll(localOrigin, localDir)
 
@@ -264,27 +231,27 @@ func ComputeFacePenetrations(m *mesh.Mesh, bvhTree *bvh.BVH,
 			alphaRad := float64(alpha) * 2 * math.Pi / float64(numProjections)
 
 			localSrc := sourcePos
-			localSrc = rotateY(localSrc, -alphaRad)
-			localSrc = rotateY(localSrc, -phiRad)
-			localSrc = rotateX(localSrc, -thetaRad)
+			localSrc = vec.RotateY(localSrc, -alphaRad)
+			localSrc = vec.RotateY(localSrc, -phiRad)
+			localSrc = vec.RotateX(localSrc, -thetaRad)
 
 			// Per-goroutine local max
 			localMax := make([]float64, numFaces)
 
 			for fi := 0; fi < numFaces; fi++ {
 				worldCentroid := centroids[fi]
-				worldCentroid = rotateX(worldCentroid, thetaRad)
-				worldCentroid = rotateY(worldCentroid, phiRad)
-				worldCentroid = rotateY(worldCentroid, alphaRad)
+				worldCentroid = vec.RotateX(worldCentroid, thetaRad)
+				worldCentroid = vec.RotateY(worldCentroid, phiRad)
+				worldCentroid = vec.RotateY(worldCentroid, alphaRad)
 
-				rayDir := sub(worldCentroid, sourcePos)
-				rayDir = normalize(rayDir)
+				rayDir := vec.Sub(worldCentroid, sourcePos)
+				rayDir = vec.Normalize(rayDir)
 
 				localDir := rayDir
-				localDir = rotateY(localDir, -alphaRad)
-				localDir = rotateY(localDir, -phiRad)
-				localDir = rotateX(localDir, -thetaRad)
-				localDir = normalize(localDir)
+				localDir = vec.RotateY(localDir, -alphaRad)
+				localDir = vec.RotateY(localDir, -phiRad)
+				localDir = vec.RotateX(localDir, -thetaRad)
+				localDir = vec.Normalize(localDir)
 
 				hits, _ := bvhTree.IntersectAll(localSrc, localDir)
 
