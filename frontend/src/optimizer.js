@@ -113,7 +113,7 @@ function showResults(result) {
   // Optimal orientation card
   $('opt-angles').textContent = `\u03B8 = ${best.theta}\u00B0  \u03C6 = ${best.phi}\u00B0`;
   const pct = (bv, wv) => { if (!wv) return '--'; const ch = ((bv - wv) / wv * 100); return (ch >= 0 ? '+' : '') + ch.toFixed(1) + '%'; };
-  const style = (ch) => ch < 0 ? 'style="color:var(--green)"' : '';
+  const style = (ch) => ch < 0 ? 'style="color:var(--green-500)"' : '';
 
   const rows = [
     ['f_mtl', worstScore.fMtl.toFixed(3), bestScore.fMtl.toFixed(3), pct(bestScore.fMtl, worstScore.fMtl), (bestScore.fMtl - worstScore.fMtl)],
@@ -132,9 +132,9 @@ function showResults(result) {
     $('rs-energy').textContent = rec.kv + ' kV';
     // Qualitative label
     let qual, color;
-    if (rec.kv < 100) { qual = '\u25B2 Higher kV recommended'; color = 'var(--amber)'; }
+    if (rec.kv < 100) { qual = '\u25B2 Higher kV recommended'; color = 'var(--amber-500)'; }
     else if (rec.kv <= 200) { qual = 'Medium kV suitable'; color = 'var(--text)'; }
-    else { qual = '\u25BC Lower kV sufficient'; color = 'var(--green)'; }
+    else { qual = '\u25BC Lower kV sufficient'; color = 'var(--green-500)'; }
     $('energy-qual').innerHTML = `<span style="color:${color}">${qual}</span>`;
     // Savings vs worst
     const savings = ((1 - bestScore.fEnergy / worstScore.fEnergy) * 100).toFixed(0);
