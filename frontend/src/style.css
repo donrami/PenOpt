@@ -46,6 +46,13 @@ html, body { height: 100%; overflow: hidden; font-family: var(--font); backgroun
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--border-light); }
 
+/* ── Icon Sizes ── */
+.icon--xs { width: 12px; height: 12px; }
+.icon--sm { width: 14px; height: 14px; }
+.icon--md { width: 18px; height: 18px; }
+.icon--lg { width: 24px; height: 24px; }
+.icon--xl { width: 32px; height: 32px; }
+
 /* ── Header ── */
 #header {
   display: flex; align-items: center; justify-content: space-between;
