@@ -4,7 +4,7 @@ import { S, $, qsa, showError, setStatus } from './state.js';
 import { initScene, resizeViewport, resetCamera, switchViewMode, switchLayoutMode, createBeamVisualization, destroyBeamVisualization } from './scene.js';
 import { setupFileUpload, handlePickedMesh } from './filehandler.js';
 import { setupSliders, renderMatGrid, renderFilters, selectMaterial, recalcBeam, setupScannerPresets, setMatFilter } from './materials.js';
-import { setupRayGrid, setupAccordion, setupTradeoff, setupExport, setupPlotTabs, runOptimization, cancelSearch } from './optimizer.js';
+import { setupRayGrid, setupAccordion, setupCardAccordion, setupTradeoff, setupExport, setupPlotTabs, runOptimization, cancelSearch } from './optimizer.js';
 import { GetMaterials, GetFilters, GetScannerPresets, PickAndLoadMesh } from '../wailsjs/go/main/App';
 
 // ── Keyboard shortcuts ──
@@ -49,7 +49,7 @@ async function init() {
     renderMatGrid(); renderFilters();
   } catch (err) { showError('Failed to load database: ' + err.message); }
 
-  setupFileUpload(); setupSliders(); setupAccordion(); setupRayGrid(); setupHelp(); setupKeyboard();
+  setupFileUpload(); setupSliders(); setupAccordion(); setupCardAccordion(); setupRayGrid(); setupHelp(); setupKeyboard();
   setupScannerPresets(); setupTradeoff(); setupExport(); setupPlotTabs();
 
   // Material tabs
@@ -101,7 +101,7 @@ async function init() {
       var data = JSON.parse(localStorage.getItem('penopt-last-result'));
       if (data && data.bestOrientation) {
         $('rs-angle').textContent = '\u03B8=' + data.bestOrientation.theta + '\u00B0 \u03C6=' + data.bestOrientation.phi + '\u00B0';
-        $('results').classList.remove('hidden');
+        $('results-panel').classList.remove('hidden');
         $('card-tradeoff').classList.remove('tradeoff-disabled');
         setStatus('Restored previous results');
       }
@@ -110,6 +110,19 @@ async function init() {
   $('btn-restore-dismiss').addEventListener('click', function() {
     $('restore-banner').classList.add('hidden');
   });
+
+  // Results panel collapse toggle
+  const resultsPanel = $('results-panel');
+  const resultsContent = $('results-content');
+  const resultsCollapseBtn = $('results-collapse-btn');
+  if (resultsCollapseBtn && resultsPanel) {
+    resultsCollapseBtn.addEventListener('click', function() {
+      const isCollapsed = resultsContent.style.display === 'none';
+      resultsContent.style.display = isCollapsed ? '' : 'none';
+      resultsCollapseBtn.innerHTML = isCollapsed ? '&#x25BC;' : '&#x25B2;';
+      resultsCollapseBtn.title = isCollapsed ? 'Collapse results' : 'Expand results';
+    });
+  }
 }
 
 document.addEventListener('DOMContentLoaded', init);

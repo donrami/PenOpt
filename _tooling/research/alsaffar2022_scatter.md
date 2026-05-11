@@ -1,0 +1,56 @@
+# Alsaffar et al. 2022 — Fast Monte Carlo Scatter Correction for Cone-Beam CT
+
+## Reference
+
+**Authors:** Ammar Alsaffar, Steffen Kieß, Kaicong Sun, Sven Simon (University of Stuttgart)  
+**Title:** *Computational scatter correction in near real-time with a fast Monte Carlo photon transport model for high-resolution flat-panel CT*  
+**Venue:** Journal of Real-Time Image Processing, Vol. 19, pp. 1063–1079 (2022)  
+**DOI:** [10.1007/s11554-022-01247-7](https://doi.org/10.1007/s11554-022-01247-7)  
+**arXiv:** [2201.13191](https://arxiv.org/abs/2201.13191) (preprint)
+
+## Abstract
+
+In CT, scattering causes severe quality degradation (streaks, cupping artifacts) that reduce detectability of low-contrast objects. Monte Carlo simulation is the most accurate approach for scatter estimation, but existing MC estimators are computationally expensive, especially for high-resolution flat-panel CT. This paper proposes a fast and accurate MC photon transport model describing physics in the 1 keV to 1 MeV range with multiple controllable key parameters. Scatter computation for a single projection completes within seconds. Combining fast scatter estimation with filtered backprojection (FBP), scatter correction is performed iteratively. The proposed model achieved 15× acceleration on single-GPU vs. Penelope MCGPU and 202× speed-up on multi-GPU vs. EGSnrc.
+
+## Role in PenOpt (PenOpt: `internal/physics/scatter.go`)
+
+### 1. Scatter-to-Primary Ratio Model (`SparseGridSPR`)
+
+PenOpt uses an **analytical scatter-to-primary ratio (SPR)** model inspired by Alsaffar's approach, adapted for the sparse 16×16 ray grid:
+
+```go
+func SparseGridSPR(meanThickness float64, energy float64, mat Material) float64
+```
+
+| Parameter | Description | Typical Range |
+|---|---|---|
+| `meanThickness` | Mean ray path through object (mm) | 0–500 mm |
+| `energy` | Effective energy (keV) | 30–500 keV |
+| `mat` | Material properties (density, μ) | Al, Fe, Ti, etc. |
+
+The SPR is clamped to [0, 2] to prevent unphysical values.
+
+### 2. Integration with Physics Pipeline
+
+```
+SparseGridSPR(meanThickness, energy, mat)
+       ↓
+SPR value [0, 2]  →  weighting factor for scatter degradation
+       ↓
+f_scatter objective (higher SPR → worse scatter artifacts)
+```
+
+### 3. Simplification vs. Full Model
+
+| Aspect | Alsaffar et al. (2022) | PenOpt |
+|---|---|---|
+| **Method** | MC photon transport (GPU) | Analytical SPR formula |
+| **Resolution** | Full projection (high-res flat-panel) | 16×16 sparse grid |
+| **Output** | Full scatter distribution map | Single SPR value |
+| **Speed** | Seconds per projection | Microseconds per evaluation |
+| **Accuracy** | High (validated against measurements) | Approximate (geometric proxy) |
+| **Energy range** | 1 keV – 1 MeV | Single effective energy |
+
+## Key Insight Used in PenOpt
+
+The core insight adopted from Alsaffar is that **scatter magnitude correlates with mean ray path length through the object** (more material → more Compton scattering → higher SPR). This allows PenOpt to use mean transmission length as a fast geometric surrogate for scatter severity during optimisation, without running expensive MC simulations for each candidate orientation.

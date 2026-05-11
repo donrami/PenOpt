@@ -86,7 +86,7 @@ export function removeMesh() {
   destroyBeamVisualization();
   exitCompareMode();
   S.meshLoaded = false; S.meshInfo = null; S.result = null; S.facePenetrations = null;
-  $('file-meta').classList.add('hidden'); $('grid-info').classList.add('hidden'); $('results').classList.add('hidden');
+  $('file-meta').classList.add('hidden'); $('grid-info').classList.add('hidden'); $('results-panel').classList.add('hidden');
   $('wt-banner').classList.add('hidden'); $('btn-reset-float').classList.add('hidden');
   $('card-tradeoff').style.display = 'none'; $('heatmap-legend').classList.add('hidden');
   $('os-dot').className = 'os-dot os-dot--idle'; $('os-text').textContent = 'Upload a mesh and select a material';

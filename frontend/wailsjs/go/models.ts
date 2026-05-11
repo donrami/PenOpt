@@ -1,6 +1,6 @@
-export namespace main {
+export namespace app {
 	
-	export class meshInfo {
+	export class MeshInfo {
 	    name: string;
 	    numTriangles: number;
 	    numVertices: number;
@@ -20,7 +20,7 @@ export namespace main {
 	    extentZ: number;
 	
 	    static createFrom(source: any = {}) {
-	        return new meshInfo(source);
+	        return new MeshInfo(source);
 	    }
 	
 	    constructor(source: any = {}) {
@@ -44,6 +44,11 @@ export namespace main {
 	        this.extentZ = source["extentZ"];
 	    }
 	}
+
+}
+
+export namespace main {
+	
 	export class runRequest {
 	    weights: number[];
 	    method: string;

@@ -15,7 +15,7 @@ export function runOptimization() {
 
   // Show search UI
   $('btn-optimize').disabled = true; $('btn-optimize').innerHTML = '\u25B6 Searching...';
-  $('vp-progress').classList.remove('hidden'); $('results').classList.add('hidden');
+  $('vp-progress').classList.remove('hidden'); $('results-panel').classList.remove('hidden');
   $('progress-ring').classList.remove('hidden'); $('hud-rot').classList.remove('hidden');
   $('os-dot').className = 'os-dot os-dot--searching'; $('os-text').textContent = 'Searching...';
   $('progress-fill').style.width = '0%';
@@ -151,12 +151,13 @@ function showResults(result) {
   drawContourPlot(result.allScores, best, worst, result.isPartial);
   drawPenetrationRose(result.penetrationRose, result.worstPenetrationRose, result.isPartial, null, null);
 
-  // Enable tradeoff card
+  // Enable tradeoff card (also unhide if previously hidden by removeMesh)
+  $('card-tradeoff').style.display = '';
   $('card-tradeoff').classList.remove('tradeoff-disabled');
 
   // Results visible
   S.facePenetrations = null;
-  $('results').classList.remove('hidden');
+  $('results-panel').classList.remove('hidden');
 }
 
 // ── IntelliScan ──
@@ -221,6 +222,22 @@ async function loadHeatmap(result) {
     S.facePenMin = mn; S.facePenMax = mx;
     if (S.viewMode === 'heatmap') applyHeatmap();
   } catch (err) { console.warn('Heatmap error:', err); }
+}
+
+// ── Sidebar Card Accordions ──
+export function setupCardAccordion() {
+  qsa('.card.accordion').forEach(card => {
+    const head = card.querySelector('.card-head');
+    if (!head) return;
+    head.addEventListener('click', () => {
+      const isOpen = card.classList.contains('open');
+      card.classList.toggle('open');
+      const body = card.querySelector('.card-body');
+      if (body) body.classList.toggle('collapsed', isOpen);
+      const chev = head.querySelector('.chevron');
+      if (chev) chev.classList.toggle('open', !isOpen);
+    });
+  });
 }
 
 // ── Accordion ──

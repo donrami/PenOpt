@@ -1,33 +1,27 @@
-# --- Project-specific directories (private / research / tooling) ---
-_research/
-_tooling/
-.pi/
+# ── Project-specific artifacts ──────────────────────────────
+_tooling/                      # Agent tooling & planning artifacts
+.pi/                           # Pi agent configuration
+frontend/wailsjs/              # Wails auto-generated Go→JS bindings
+frontend/dist/                 # Vite frontend build output
 
-# --- Secrets & local config ---
+# ── Build output ────────────────────────────────────────────
+build/bin/
+build/*/bin/
+
+# ── Dependencies ────────────────────────────────────────────
+node_modules/
+vendor/                        # Go vendor (if used)
+
+# ── Secrets & credentials ────────────────────────────────────
 .env
 .env.*
-*.env
-*.secret
-credentials*
-secrets*
 *.key
 *.pem
 *.cert
-config.local.*
-*.local
+credentials*
+secrets*
 
-# --- Build output ---
-build/bin
-build/*/bin
-
-# --- Dependencies ---
-node_modules/
-frontend/node_modules/
-
-# --- Frontend build ---
-frontend/dist/
-
-# --- Go ---
+# ── Go compiled artifacts ────────────────────────────────────
 *.exe
 *.exe~
 *.dll
@@ -35,12 +29,18 @@ frontend/dist/
 *.dylib
 *.test
 *.out
-vendor/
 
-# --- OS files ---
+# ── Temp & logs ──────────────────────────────────────────────
+*.log
+tmp/
+temp/
+
+# ── Editor / OS junk ─────────────────────────────────────────
 .DS_Store
 Thumbs.db
 *.swp
 *.swo
 *~
-CONTEXT.md
+
+# ── Local overrides ──────────────────────────────────────────
+.githooks/

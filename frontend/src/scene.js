@@ -166,10 +166,10 @@ export function switchViewMode(mode) {
 export function switchLayoutMode(mode) {
   S.layoutMode = mode;
   qsa('.vp-layout-btn').forEach(b => b.classList.toggle('active', b.dataset.layout === mode));
-  const sb = $('sidebar'), res = $('results');
+  const sb = $('sidebar'), res = $('results-panel');
   if (mode === 'viewport') { sb.style.display = 'none'; res.style.display = 'none'; }
-  else if (mode === 'results') { sb.style.display = 'none'; res.style.display = ''; }
-  else { sb.style.display = ''; res.style.display = ''; }
+  else if (mode === 'results') { sb.style.display = 'none'; res.style.display = ''; res.classList.remove('hidden'); }
+  else { sb.style.display = ''; res.style.display = ''; if (S.result) res.classList.remove('hidden'); }
 }
 
 // ── Beam Visualization ──
