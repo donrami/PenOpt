@@ -221,7 +221,13 @@ func ComputeFacePenetrations(m *mesh.Mesh, bvhTree *bvh.BVH,
 	// Source position in world space
 	sourcePos := mesh.Vec3{X: -cfg.SOD, Y: 0, Z: 0}
 
-	var mu sync.Mutex
+	// Per-goroutine partial results, merged after all complete
+	type partial struct {
+		index int
+		max   []float64
+	}
+	results := make(chan partial, numProjections)
+
 	var wg sync.WaitGroup
 	wg.Add(numProjections)
 
@@ -235,7 +241,6 @@ func ComputeFacePenetrations(m *mesh.Mesh, bvhTree *bvh.BVH,
 			localSrc = vec.RotateY(localSrc, -phiRad)
 			localSrc = vec.RotateX(localSrc, -thetaRad)
 
-			// Per-goroutine local max
 			localMax := make([]float64, numFaces)
 
 			for fi := 0; fi < numFaces; fi++ {
@@ -273,17 +278,21 @@ func ComputeFacePenetrations(m *mesh.Mesh, bvhTree *bvh.BVH,
 				}
 			}
 
-			// Merge local results into global with mutex
-			mu.Lock()
-			for fi, v := range localMax {
-				if v > faceMax[fi] {
-					faceMax[fi] = v
-				}
-			}
-			mu.Unlock()
+			results <- partial{index: alpha, max: localMax}
 		}(alpha)
 	}
+
 	wg.Wait()
+	close(results)
+
+	// Merge sequentially — no lock contention
+	for p := range results {
+		for fi, v := range p.max {
+			if v > faceMax[fi] {
+				faceMax[fi] = v
+			}
+		}
+	}
 
 	return faceMax
 }
