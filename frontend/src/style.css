@@ -370,7 +370,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); height: 4px; cur
 }
 .rs-item { display: flex; flex-direction: column; gap: 1px; }
 .rs-lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); }
-.rs-val { font-family: var(--mono); font-size: 13px; font-weight: 600; }
+.rs-val { font-family: var(--mono); font-size: 14px; font-weight: 600; }
 .rs-val.accent { color: var(--accent); }
 .rs-sep { width: 1px; height: 24px; background: var(--border); }
 
