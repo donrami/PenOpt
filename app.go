@@ -225,13 +225,19 @@ func (a *App) RunOptimization(req runRequest) (string, error) {
 					"idx":   idx,
 					"total": total,
 				})
-			}, m)
+			})
 
 		if err != nil || result == nil {
 			runtime.EventsEmit(a.ctx, "search:done", map[string]interface{}{
 				"error": fmt.Sprintf("Search failed: %v", err),
 			})
 			return
+		}
+
+		// Compute IntelliScan separately (no longer inside search.Run)
+		if m != nil {
+			is := search.ComputeIntelliScanAngles(m, result.BestOrientation.Theta, result.BestOrientation.Phi)
+			result.IntelliScan = &is
 		}
 
 		data, err := json.Marshal(result)

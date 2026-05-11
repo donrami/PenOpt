@@ -58,13 +58,13 @@ func TestEvaluateSingle(t *testing.T) {
 }
 
 func TestRun_ReturnsResult(t *testing.T) {
-	m, bvhTree := buildTestMesh()
+	_, bvhTree := buildTestMesh()
 	cfg := raycaster.DefaultScannerConfig()
 	cfg.RayGridX = 4
 	cfg.RayGridY = 4
 	cfg.NumProjections = 8
 
-	result, err := Run(bvhTree, cfg, [3]float64{0.4, 0.4, 0.2}, "weighted", nil, m)
+	result, err := Run(bvhTree, cfg, [3]float64{0.4, 0.4, 0.2}, "weighted", nil)
 	if err != nil {
 		t.Fatalf("Run() returned error: %v", err)
 	}
@@ -92,11 +92,11 @@ func TestRun_WithoutMesh_NoIntelliScan(t *testing.T) {
 	cfg.RayGridY = 4
 	cfg.NumProjections = 8
 
-	result, err := Run(bvhTree, cfg, [3]float64{0.4, 0.4, 0.2}, "weighted", nil, nil)
+	result, err := Run(bvhTree, cfg, [3]float64{0.4, 0.4, 0.2}, "weighted", nil)
 	if err != nil {
 		t.Fatalf("Run() returned error: %v", err)
 	}
 	if result.IntelliScan != nil {
-		t.Error("expected IntelliScan to be nil when mesh is nil")
+		t.Error("expected IntelliScan to be nil since Run no longer computes it")
 	}
 }

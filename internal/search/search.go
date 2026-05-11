@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"penopt/internal/bvh"
-	"penopt/internal/mesh"
 	"penopt/internal/objectives"
 	"penopt/internal/raycaster"
 )
@@ -81,9 +80,8 @@ type ProgressFn func(idx, total int, theta, phi float64)
 // weights: [w_mtl, w_energy, w_hdn]
 // method: "weighted" or "minimax"
 // onProgress is called after each orientation (may be nil).
-// mesh is used for IntelliScan computation (may be nil).
 func Run(bvhTree *bvh.BVH, cfg raycaster.ScannerConfig,
-	weights [3]float64, method string, onProgress ProgressFn, mesh *mesh.Mesh) (*Result, error) {
+	weights [3]float64, method string, onProgress ProgressFn) (*Result, error) {
 
 	startTime := time.Now()
 
@@ -187,13 +185,6 @@ func Run(bvhTree *bvh.BVH, cfg raycaster.ScannerConfig,
 		WorstOrientation: allScores[worstIdx],
 		AllScores:        allScores,
 		SearchTimeMs:     elapsed,
-	}
-
-	// Compute IntelliScan angles if mesh is available
-	if mesh != nil {
-		best := allScores[bestIdx]
-		is := ComputeIntelliScanAngles(mesh, best.Theta, best.Phi)
-		res.IntelliScan = &is
 	}
 
 	return res, nil
