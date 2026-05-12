@@ -96,6 +96,9 @@ function finishSearch() {
   $('os-dot').className = 'os-dot os-dot--ready';
   $('os-text').textContent = S.searchCancel ? 'Cancelled' : 'Complete';
   setStatus(S.searchCancel ? 'Search cancelled' : 'Optimization complete');
+  // Reset Update Search button
+  var updateBtn = $('btn-update-search');
+  if (updateBtn) { updateBtn.textContent = 'Update Search'; updateBtn.style.opacity = ''; }
 }
 
 export function cancelSearch() { S.searchCancel = true; setStatus('Cancelling...'); }
@@ -106,10 +109,14 @@ function showResults(result) {
   const worstScore = result.allScores.find(s => s.theta === worst.theta && s.phi === worst.phi);
   if (!bestScore || !worstScore) return;
 
-  // Summary bar
+  // Summary bar — plain language + directional indicators
   $('rs-angle').textContent = `\u03B8=${best.theta}\u00B0 \u03C6=${best.phi}\u00B0`;
-  $('rs-fmtl').textContent = ((bestScore.fMtl - worstScore.fMtl) / worstScore.fMtl * 100).toFixed(1) + '%';
-  $('rs-fenergy').textContent = ((bestScore.fEnergy - worstScore.fEnergy) / worstScore.fEnergy * 100).toFixed(1) + '%';
+  const fmtlDelta = ((bestScore.fMtl - worstScore.fMtl) / worstScore.fMtl * 100);
+  const fenergyDelta = ((bestScore.fEnergy - worstScore.fEnergy) / worstScore.fEnergy * 100);
+  $('rs-fmtl').textContent = Math.abs(fmtlDelta).toFixed(1) + '% better';
+  $('rs-fmtl').style.color = fmtlDelta < 0 ? 'var(--green-500)' : 'var(--text)';
+  $('rs-fenergy').textContent = Math.abs(fenergyDelta).toFixed(1) + '% better';
+  $('rs-fenergy').style.color = fenergyDelta < 0 ? 'var(--green-500)' : 'var(--text)';
   var totalEval = result.allScores.length;
   var coarseEval = result.numCoarseEval || 0;
   var fineEval = result.numFineEval || 0;
@@ -117,6 +124,16 @@ function showResults(result) {
   if (result.coarseTimeMs) {
     timeStr = result.coarseTimeMs.toFixed(0) + '+' + result.fineTimeMs.toFixed(0) + 'ms';
   }
+  // Tuy completeness indicator
+  var tuyEl = $('rs-tuy');
+  if (tuyEl) {
+    var tuyPct = bestScore.fTuy !== undefined ? (bestScore.fTuy * 100) : null;
+    if (tuyPct !== null) {
+      tuyEl.textContent = tuyPct.toFixed(0) + '%';
+      tuyEl.style.color = tuyPct > 90 ? 'var(--green-500)' : tuyPct >= 70 ? 'var(--amber-300)' : 'var(--red-500)';
+    }
+  }
+
   $('rs-evals').textContent = totalEval + ' orientations (' + timeStr + ')';
   $('rs-evals').parentElement.title = coarseEval + ' coarse + ' + fineEval + ' fine | ' + result.searchTimeMs.toFixed(0) + 'ms total';
 
@@ -264,12 +281,9 @@ export function setupCardAccordion() {
     const head = card.querySelector('.card-head');
     if (!head) return;
     head.addEventListener('click', () => {
-      const isOpen = card.classList.contains('open');
       card.classList.toggle('open');
-      const body = card.querySelector('.card-body');
-      if (body) body.classList.toggle('collapsed', isOpen);
       const chev = head.querySelector('.chevron');
-      if (chev) chev.classList.toggle('open', !isOpen);
+      if (chev) chev.classList.toggle('open');
     });
   });
 }
@@ -299,18 +313,30 @@ export function setupTradeoff() {
     });
   });
   $('btn-update-search').addEventListener('click', () => {
+    // Show loading state
+    const btn = $('btn-update-search');
+    btn.textContent = 'Updating...';
+    btn.style.opacity = '0.7';
     // Re-run with new weights
     runOptimization();
+    // Reset after results show
+    var checkDone = setInterval(function() {
+      if (!S.searching) {
+        btn.textContent = 'Update Search';
+        btn.style.opacity = '';
+        clearInterval(checkDone);
+      }
+    }, 500);
   });
 }
 
 // ── Export ──
 export function setupExport() {
   $('btn-export').addEventListener('click', () => {
-    if (S.result) exportJSON(S.result);
+    if (S.result) exportJSON(S.result, $('btn-export'));
   });
   $('btn-export-png').addEventListener('click', () => {
-    if (S.result) exportPNG(S.renderer, S.result, $('energy-val')?.textContent || '--');
+    if (S.result) exportPNG(S.renderer, S.result, $('energy-val')?.textContent || '--', $('btn-export-png'));
   });
 }
 

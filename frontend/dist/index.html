@@ -7,22 +7,22 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-  <script type="module" crossorigin src="/assets/index.8a2f1d90.js"></script>
-  <link rel="stylesheet" href="/assets/index.8be7af1a.css">
+  <script type="module" crossorigin src="/assets/index.d5de5beb.js"></script>
+  <link rel="stylesheet" href="/assets/index.d9b940e0.css">
 </head>
 <body>
   <div id="app">
     <!-- ═══ HEADER ═══ -->
     <header id="header">
       <div class="header-left">
-        <svg class="header-logo icon--md" viewBox="0 0 100 100" fill="none"><rect width="100" height="100" rx="20" fill="#3b82f6"/><text x="50" y="68" font-family="sans-serif" font-size="48" font-weight="bold" fill="white" text-anchor="middle">CT</text></svg>
+        <svg class="header-logo icon--md" viewBox="0 0 100 100" fill="none"><rect width="100" height="100" rx="20" fill="currentColor"/><text x="50" y="68" font-family="sans-serif" font-size="48" font-weight="bold" fill="white" text-anchor="middle">CT</text></svg>
         <h1><span class="accent">Pen</span>Opt</h1>
         <span class="subtitle">CT Scan Orientation Optimizer</span>
       </div>
       <div class="header-right">
-        <span class="pill" id="pill-kev" data-tip="Beam effective energy">-- keV</span>
-        <span class="pill" id="pill-tmin" data-tip="Min transmission Tmin">-- Tmin</span>
-        <span class="pill" id="pill-eeff" data-tip="Effective energy after filter">-- Eeff</span>
+        <span class="pill" id="pill-kev" data-tip="Beam effective energy" aria-label="Beam energy: -- keV">-- keV</span>
+        <span class="pill" id="pill-tmin" data-tip="Min transmission Tmin" aria-label="Minimum transmission: -- Tmin">-- Tmin</span>
+        <span class="pill" id="pill-eeff" data-tip="Effective energy after filter" aria-label="Effective energy: -- Eeff">-- Eeff</span>
         <button class="icon-btn" id="btn-help" data-tip="Help & documentation">?</button>
       </div>
     </header>
@@ -38,9 +38,11 @@
     <div id="layout">
       <!-- ─── SIDEBAR ─── -->
       <aside id="sidebar">
+        <!-- Progress indicator -->
+        <div class="sidebar-progress" id="sidebar-progress">Step 1 of 3 — Load a mesh to begin</div>
         <!-- Step 1: Upload (always open) -->
         <section class="card" id="card-upload">
-          <div class="card-head"><span class="step-num">1</span>Upload <svg class="chevron" style="display:none" width="8" height="8" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l4 4 4-4"/></svg></div>
+          <div class="card-head">Upload <svg class="chevron" style="display:none" width="8" height="8" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l4 4 4-4"/></svg></div>
           <div class="card-body">
             <div id="drop-zone">
               <svg width="28" height="28" viewBox="0 0 14 14" fill="none"><path d="M7 1v9M3 5l4-4 4 4M2 10v2h10v-2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -52,6 +54,7 @@
               <div class="fm-row"><span class="fm-name" id="fm-name"></span></div>
               <div class="fm-row"><span id="fm-tris"></span></div>
               <div class="fm-row" id="fm-wt-row"><span class="dot-wrap" data-tip="Watertight"><span id="fm-dot" class="dot dot--green"></span></span><span id="fm-wt">watertight</span></div>
+              <div id="wt-sidebar-row" class="hidden"><span class="wt-icon">⚠</span><span id="wt-sidebar-text"></span></div>
               <div class="fm-row"><span id="fm-bbox"></span></div>
               <button class="fm-remove" id="btn-remove">Remove</button>
             </div>
@@ -60,7 +63,7 @@
 
         <!-- Step 2: Material (accordion) -->
         <section class="card accordion" id="card-material">
-          <div class="card-head"><span class="step-num">2</span>Material <svg class="chevron" width="8" height="8" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l4 4 4-4"/></svg></div>
+          <div class="card-head">Material<span class="mat-subtitle" id="mat-subtitle"></span> <svg class="chevron" width="8" height="8" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l4 4 4-4"/></svg></div>
           <div class="card-body" id="card-material-body">
             <div class="mat-tabs" id="mat-tabs">
               <button class="mat-tab active" data-cat="all">All</button>
@@ -89,19 +92,19 @@
 
         <!-- Step 3: Optimize (accordion) -->
         <section class="card accordion" id="card-optimize">
-          <div class="card-head"><span class="step-num">3</span>Optimize <svg class="chevron" width="8" height="8" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l4 4 4-4"/></svg></div>
+          <div class="card-head">Optimize <svg class="chevron" width="8" height="8" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l4 4 4-4"/></svg></div>
           <div class="card-body">
             <div class="opt-status" id="opt-status">
               <span class="os-dot os-dot--idle" id="os-dot"></span>
               <span id="os-text">Upload a mesh and select a material</span>
             </div>
             <div id="grid-info" class="hidden">32&sup2; rays &middot; coarse + fine &middot; ~30s-2min</div>
-            <div id="restore-banner" class="hidden" style="margin-top:6px;display:flex;align-items:center;gap:6px;padding:4px 6px;background:var(--accent-tint);border:1px solid rgba(59,130,246,0.2);border-radius:var(--radius-sm);font-size:10px">
+            <div id="restore-banner" class="hidden">
               <span>Previous results available.</span>
-              <button id="btn-restore" style="padding:2px 8px;border:1px solid var(--accent);border-radius:3px;background:transparent;color:var(--accent);cursor:pointer;font-size:9px;font-weight:600">Restore</button>
-              <button id="btn-restore-dismiss" style="margin-left:auto;background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:14px">&times;</button>
+              <button id="btn-restore">Restore</button>
+              <button id="btn-restore-dismiss" class="restore-dismiss">Dismiss</button>
             </div>
-            <button class="btn btn-primary" id="btn-optimize-sidebar" disabled style="width:100%;margin-top:8px" data-tip="Run optimization search">▶ <span>Optimize</span></button>
+            <button class="btn btn-primary w-full mt-3" id="btn-optimize-sidebar" disabled data-tip="Run optimization search">▶ <span>Optimize</span></button>
           </div>
         </section>
 
@@ -210,9 +213,10 @@
               <button class="vp-mode-btn" data-mode="compare" data-tip="Ghost overlay compare">Cmp</button>
             </div>
             <div class="vp-layout-group" id="vp-layout-group">
-              <button class="vp-layout-btn active" data-layout="default" data-tip="Default layout">D</button>
-              <button class="vp-layout-btn" data-layout="viewport" data-tip="Full viewport">V</button>
-              <button class="vp-layout-btn" data-layout="results" data-tip="Full results">R</button>
+              <button class="vp-layout-btn active" data-layout="default" data-tip="Default — sidebar + viewport + results">Dflt</button>
+              <button class="vp-layout-btn" data-layout="viewport" data-tip="Viewport only">VP</button>
+              <button class="vp-layout-btn" data-layout="results" data-tip="Viewport + results, no sidebar">Res</button>
+              <button class="vp-layout-btn" data-layout="all" data-tip="All panels">All</button>
             </div>
           </div>
           <div class="vp-header-row vp-header-row--actions">
@@ -288,9 +292,11 @@
               <div class="rs-sep"></div>
               <div class="rs-item"><span class="rs-lbl">Energy</span><span class="rs-val accent" id="rs-energy">--</span></div>
               <div class="rs-sep"></div>
-              <div class="rs-item"><span class="rs-lbl">f_mtl &Delta;</span><span class="rs-val" id="rs-fmtl">--</span></div>
+              <div class="rs-item"><span class="rs-lbl">Max Penetration</span><span class="rs-val" id="rs-fmtl">--</span></div>
               <div class="rs-sep"></div>
-              <div class="rs-item"><span class="rs-lbl">f_energy &Delta;</span><span class="rs-val" id="rs-fenergy">--</span></div>
+              <div class="rs-item"><span class="rs-lbl">Energy Demand</span><span class="rs-val" id="rs-fenergy">--</span></div>
+              <div class="rs-sep"></div>
+              <div class="rs-item"><span class="rs-lbl">Tuy</span><span class="rs-val" id="rs-tuy">--</span></div>
               <div class="rs-item" style="margin-left:auto"><span class="rs-lbl" id="rs-evals"></span></div>
             </div>
             <div id="results-grid">
@@ -327,7 +333,7 @@
               <!-- Analysis Plots Card -->
               <div class="res-card">
                 <div class="rc-head">Analysis Plots</div>
-                <div class="rc-body" style="padding:0">
+                <div class="rc-body p-0">
                   <div class="plot-tabs">
                     <button class="plot-tab active" data-plot="contour">Score Contour</button>
                     <button class="plot-tab" data-plot="rose">Penetration Rose</button>
@@ -367,7 +373,7 @@
 
     <!-- Status bar -->
     <footer id="status-bar">
-      <span id="status-text">Ready</span>
+      <span id="status-text" aria-live="polite">Ready</span>
       <span id="status-mesh"></span>
     </footer>
 
@@ -377,32 +383,33 @@
         <div class="help-head">Help &amp; Documentation<button id="btn-help-close">&times;</button></div>
         <div class="help-body" id="help-body">
             <h3>Overview</h3>
-            <p>PenOpt calculates the optimal scan orientation for industrial X-ray CT. Given a 3D mesh (STL or OBJ), it searches over tilt angles (θ, φ) to minimize X-ray penetration length and energy consumption.</p>
+            <p>PenOpt finds the optimal tilt (θ) and rotation (φ) angles for scanning a part in an X-ray CT system. It casts rays through your 3D mesh, evaluates three objectives per orientation, and returns the best angles plus a kV recommendation.</p>
+
             <h3>How It Works</h3>
-            <p><strong>1.</strong> Upload a mesh — the app builds a BVH for fast ray intersection.</p>
-            <p><strong>2.</strong> Configure beam energy, Tmin, pre-filter, scanner geometry.</p>
-            <p><strong>3.</strong> Select a material from the NIST XCOM database (40+ materials).</p>
-            <p><strong>4.</strong> Adjust weights for the five objectives (penetration, energy, uniformity, Tuy, beam-hardening) using the presets or future custom controls.</p>
-            <p><strong>5.</strong> Set the search range (default ±45°) to balance speed and coverage.</p>
-            <p><strong>6.</strong> Run optimization — casts rays through the mesh, coarse grid followed by fine search.</p>
-            <p><strong>7.</strong> Interpret results — optimal angles, heatmap, contour plot, energy recommendation, and Tuy completeness warning.</p>
+            <p><strong>1.</strong> Upload an STL or OBJ mesh. The app centers it at the origin and builds a BVH for fast ray casting.</p>
+            <p><strong>2.</strong> Pick a material from the NIST XCOM database (40+ options). Set beam energy and minimum transmission (Tmin).</p>
+            <p><strong>3.</strong> Choose a scanner preset or configure SDD, SOD, and detector geometry manually. Optionally add a beam pre-filter.</p>
+            <p><strong>4.</strong> Select a weight preset (Quality / Balanced / Energy) and scoring method (Minimax / Weighted). Adjust the search range.</p>
+            <p><strong>5.</strong> Click Optimize. A coarse 15° grid is searched first, then the top 3 candidates are refined at 1° resolution.</p>
+            <p><strong>6.</strong> Review the results: optimal angles, energy recommendation, Tuy completeness warning, score contour plot, and penetration rose.</p>
+            <p><strong>7.</strong> Export as JSON (full data) or PNG (screenshot with summary).</p>
+
             <h3>Objective Functions</h3>
             <ul>
-              <li><strong>f<sub>mtl</sub></strong> — Generalized mean of penetration lengths (cube-root, m=3). Lower = less artifact from thick cross-sections.</li>
-              <li><strong>f<sub>energy</sub></strong> — Maximum penetration length. Determines required X-ray tube voltage.</li>
-              <li><strong>f<sub>hdn</sub></strong> — Penetration range (max&minus;min per projection). Lower = more isotropic ray paths.</li>
-              <li><strong>f<sub>tuy</sub></strong> — Tuy-Smith completeness fraction. Fraction of faces with at least one tangent ray. Higher = fewer cone-beam artifacts. Warning shown below 90%.</li>
-              <li><strong>f<sub>bh</sub></strong> — Beam-hardening approximation (placeholder). Lower = less beam-hardening variation.</li>
+              <li><strong>f<sub>mtl</sub></strong> — Generalized mean of X-ray path lengths (m=3, cube-root). Lower = less artifact from thick cross-sections.</li>
+              <li><strong>f<sub>energy</sub></strong> — Maximum path length. Determines the required X-ray tube voltage.</li>
+              <li><strong>f<sub>hdn</sub></strong> — Range of max path lengths across projections. Lower = more isotropic ray coverage.</li>
             </ul>
-            <p><em>Note: The beam-hardening objective is currently a placeholder and will be implemented in a future update.</em></p>
+            <p><em>Note: Tuy-Smith completeness is tracked and shown as a warning when below 90%. Beam-hardening (f_bh) is planned for a future release.</em></p>
+
             <h3>Keyboard Shortcuts</h3>
             <ul>
-              <li><kbd>Ctrl+O</kbd> — Open file</li>
+              <li><kbd>Ctrl+O</kbd> — Open file dialog</li>
               <li><kbd>Ctrl+Enter</kbd> — Start optimization</li>
-              <li><kbd>Esc</kbd> — Dismiss error/help</li>
-              <li><kbd>1</kbd>/<kbd>2</kbd>/<kbd>3</kbd> — View: 3D / Heatmap / Compare</li>
+              <li><kbd>Esc</kbd> — Dismiss error / help overlay</li>
+              <li><kbd>1</kbd>/<kbd>2</kbd>/<kbd>3</kbd> — View mode: 3D / Heatmap / Compare</li>
               <li><kbd>R</kbd> — Reset camera</li>
-              <li><kbd>F</kbd> — Fullscreen</li>
+              <li><kbd>F</kbd> — Toggle fullscreen</li>
             </ul>
           </div>
       </div>

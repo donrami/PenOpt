@@ -43,14 +43,30 @@ async function handleFile(file) {
     $('fm-bbox').textContent = `${info.boundsMinX.toFixed(0)}..${info.boundsMaxX.toFixed(0)}`;
     $('file-meta').classList.remove('hidden');
     $('grid-info').classList.remove('hidden');
-    const wtDot = $('fm-dot'), wtText = $('fm-wt'), wtBanner = $('wt-banner');
-    if (info.isWatertight) { wtDot.className = 'dot dot--green'; wtText.textContent = 'watertight'; wtBanner.classList.add('hidden'); }
-    else { wtDot.className = 'dot dot--amber'; wtText.textContent = `${info.boundaryEdges} boundary edges — non-watertight`; wtBanner.textContent = '⚠ Mesh has open edges — results may be unreliable'; wtBanner.classList.remove('hidden'); }
+    const wtDot = $('fm-dot'), wtText = $('fm-wt'), wtBanner = $('wt-banner'), wtRow = $('wt-sidebar-row'), wtRowText = $('wt-sidebar-text');
+    if (info.isWatertight) {
+      wtDot.className = 'dot dot--green'; wtText.textContent = 'watertight';
+      wtBanner.classList.add('hidden'); wtRow.classList.add('hidden');
+    } else {
+      wtDot.className = 'dot dot--amber'; wtText.textContent = `${info.boundaryEdges} boundary edges — non-watertight`;
+      wtBanner.textContent = '⚠ Mesh has open edges — results may be unreliable';
+      wtBanner.classList.remove('hidden');
+      wtRow.classList.remove('hidden');
+      wtRowText.textContent = 'Open edges — penetration values are underestimated';
+    }
     $('os-text').textContent = 'Ready'; $('os-dot').className = 'os-dot os-dot--ready';
     setOptimizeBtnState({ enabled: true });
     setStatus(`Loaded ${info.numTriangles.toLocaleString()} tris`);
     $('status-mesh').textContent = info.numTriangles.toLocaleString() + ' tris';
     $('card-tradeoff').classList.add('tradeoff-disabled');
+    // Auto-open Material + Optimize cards
+    const matCard = $('card-material');
+    const optCard = $('card-optimize');
+    if (matCard) { matCard.classList.add('open'); matCard.querySelector('.chevron')?.classList.add('open'); }
+    if (optCard) { optCard.classList.add('open'); optCard.querySelector('.chevron')?.classList.add('open'); }
+    // Update sidebar progress
+    const sp = $('sidebar-progress');
+    if (sp) sp.textContent = 'Step 2 of 3 — Configure material';
     $('vp-loading').classList.add('hidden');
     // Persist mesh info
     try { localStorage.setItem('penopt-last-mesh', file.name); } catch (_) {}
@@ -74,21 +90,37 @@ export async function handlePickedMesh(info) {
     $('fm-bbox').textContent = `${info.boundsMinX.toFixed(0)}..${info.boundsMaxX.toFixed(0)}`;
     $('file-meta').classList.remove('hidden');
     $('grid-info').classList.remove('hidden');
-    const wtDot = $('fm-dot'), wtText = $('fm-wt'), wtBanner = $('wt-banner');
-    if (info.isWatertight) { wtDot.className = 'dot dot--green'; wtText.textContent = 'watertight'; wtBanner.classList.add('hidden'); }
-    else { wtDot.className = 'dot dot--amber'; wtText.textContent = info.boundaryEdges + ' boundary edges — non-watertight'; wtBanner.textContent = '⚠ Mesh has open edges — results may be unreliable'; wtBanner.classList.remove('hidden'); }
+    const wtDot = $('fm-dot'), wtText = $('fm-wt'), wtBanner = $('wt-banner'), wtRow = $('wt-sidebar-row'), wtRowText = $('wt-sidebar-text');
+    if (info.isWatertight) {
+      wtDot.className = 'dot dot--green'; wtText.textContent = 'watertight';
+      wtBanner.classList.add('hidden'); wtRow.classList.add('hidden');
+    } else {
+      wtDot.className = 'dot dot--amber'; wtText.textContent = info.boundaryEdges + ' boundary edges — non-watertight';
+      wtBanner.textContent = '⚠ Mesh has open edges — results may be unreliable';
+      wtBanner.classList.remove('hidden');
+      wtRow.classList.remove('hidden');
+      wtRowText.textContent = 'Open edges — penetration values are underestimated';
+    }
     $('os-text').textContent = 'Ready'; $('os-dot').className = 'os-dot os-dot--ready';
     setOptimizeBtnState({ enabled: true });
     setStatus('Loaded ' + info.numTriangles.toLocaleString() + ' tris');
     $('status-mesh').textContent = info.numTriangles.toLocaleString() + ' tris';
     $('card-tradeoff').classList.add('tradeoff-disabled');
+    // Auto-open Material + Optimize cards
+    const matCard = $('card-material');
+    const optCard = $('card-optimize');
+    if (matCard) { matCard.classList.add('open'); matCard.querySelector('.chevron')?.classList.add('open'); }
+    if (optCard) { optCard.classList.add('open'); optCard.querySelector('.chevron')?.classList.add('open'); }
+    // Update sidebar progress
+    const sp = $('sidebar-progress');
+    if (sp) sp.textContent = 'Step 2 of 3 — Configure material';
     try { localStorage.setItem('penopt-last-mesh', info.name); } catch (_) {}
   } catch (err) { showError('Render error: ' + err.message); }
   $('vp-loading').classList.add('hidden');
 }
 
 export function removeMesh() {
-  if (S.result && !confirm('Remove current mesh and clear all results?')) return;
+  if (!confirm('Remove mesh and clear all results?')) return;
   if (S.meshObject) { S.scene.remove(S.meshObject); S.meshObject.geometry.dispose(); S.meshObject.material.dispose(); S.meshObject = null; }
   destroyBeamVisualization();
   exitCompareMode();
@@ -97,8 +129,18 @@ export function removeMesh() {
   $('file-meta').classList.add('hidden'); $('grid-info').classList.add('hidden'); $('results-panel').classList.add('hidden');
   $('wt-banner').classList.add('hidden'); $('btn-reset-float').classList.add('hidden');
   $('card-tradeoff').style.display = 'none'; $('heatmap-legend').classList.add('hidden');
-  // Clear result warnings (rendered by optimizer.js renderResultWarnings)
+  const wtRow = $('wt-sidebar-row');
+  if (wtRow) wtRow.classList.add('hidden');
+  // Clear result warnings
   [].slice.call(document.querySelectorAll('.result-warning')).forEach(el => el.remove());
   $('os-dot').className = 'os-dot os-dot--idle'; $('os-text').textContent = 'Upload a mesh and select a material';
   setOptimizeBtnState({ enabled: false, html: '\u25B6 <span>Optimize</span>' }); setStatus('Ready'); $('status-mesh').textContent = ''; $('idle-prompt').style.display = '';
+  // Reset sidebar progress
+  const sp = $('sidebar-progress');
+  if (sp) sp.textContent = 'Step 1 of 3 — Load a mesh to begin';
+  // Close Material + Optimize cards
+  ['card-material', 'card-optimize'].forEach(function(id) {
+    const card = $(id);
+    if (card) { card.classList.remove('open'); card.querySelector('.chevron')?.classList.remove('open'); }
+  });
 }

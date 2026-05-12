@@ -94,6 +94,9 @@ async function init() {
   // Default material
   selectMaterial('al'); recalcBeam();
   $('idle-prompt').style.display = ''; setStatus('Ready — drop a mesh file');
+  // Initialize sidebar progress
+  const sp = $('sidebar-progress');
+  if (sp) sp.textContent = 'Step 1 of 3 — Load a mesh to begin';
 
   // Restore previous result if available
   try {
@@ -101,6 +104,8 @@ async function init() {
     if (saved) { $('restore-banner').classList.remove('hidden'); }
   } catch (_) {}
   $('btn-restore').addEventListener('click', function() {
+    const btn = $('btn-restore');
+    btn.textContent = 'Restoring...';
     $('restore-banner').classList.add('hidden');
     try {
       var data = JSON.parse(localStorage.getItem('penopt-last-result'));
@@ -139,8 +144,9 @@ async function init() {
           c.style.animation = '';
         });
         setStatus('Restored previous results');
+        setTimeout(function() { btn.textContent = 'Restore'; }, 1500);
       }
-    } catch (_) {}
+    } catch (_) { btn.textContent = 'Restore'; }
   });
   $('btn-restore-dismiss').addEventListener('click', function() {
     $('restore-banner').classList.add('hidden');

@@ -5,7 +5,8 @@
 /**
  * Export optimization results as a JSON file download.
  */
-export function exportJSON(result) {
+export function exportJSON(result, btn) {
+  if (btn) { btn.textContent = '\u2713 Saved!'; }
   const json = JSON.stringify({
     bestOrientation: result.bestOrientation,
     worstOrientation: result.worstOrientation,
@@ -30,6 +31,7 @@ export function exportJSON(result) {
   a.click();
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+  if (btn) setTimeout(function() { btn.textContent = '\u2913 JSON'; }, 1500);
 }
 
 /**
@@ -38,8 +40,9 @@ export function exportJSON(result) {
  * @param {Object} result - optimization result
  * @param {string} energyText - energy recommendation text (e.g. "120 kV")
  */
-export function exportPNG(renderer, result, energyText) {
+export function exportPNG(renderer, result, energyText, btn) {
   if (!renderer) return;
+  if (btn) { btn.textContent = '\u2713 Saved!'; }
 
   const vpCanvas = renderer.domElement;
   const w = vpCanvas.width;
@@ -94,4 +97,5 @@ export function exportPNG(renderer, result, energyText) {
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }, 'image/png');
+  if (btn) setTimeout(function() { btn.textContent = '\u2913 PNG'; }, 1500);
 }

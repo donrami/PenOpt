@@ -25,6 +25,10 @@ export function renderMatGrid() {
 export function selectMaterial(id) {
   S.materialID = id;
   qsa('.mat-item').forEach(el => el.classList.toggle('active', el.dataset.id === id));
+  // Update material subtitle in card header
+  const subtitleEl = document.getElementById('mat-subtitle');
+  const mat = S.mats.find(m => m.id === id);
+  if (subtitleEl && mat) subtitleEl.textContent = '— ' + mat.name;
   recalcBeam();
 }
 
@@ -83,6 +87,13 @@ export function setupSliders() {
 
   // T2.1: Ray Sampling slider
   const rgSl = $('sl-raygrid');
+  function updateGridInfo(rayGrid) {
+    const coarse = rayGrid === 0 ? 8 : rayGrid;
+    const fine = Math.min(coarse * 2, 32);
+    const timeLabel = rayGrid <= 8 ? '~10s-1m' : rayGrid <= 16 ? '~20s-2m' : '~1-5m';
+    $('grid-info').textContent = coarse + '×' + coarse + ' coarse / ' + fine + '×' + fine + ' fine · ' + timeLabel;
+    $('grid-info').classList.remove('hidden');
+  }
   if (rgSl) {
     rgSl.addEventListener('input', () => {
       const val = parseInt(rgSl.value);
@@ -95,6 +106,7 @@ export function setupSliders() {
         const fineVal = Math.min(val * 2, 32);
         $('disp-raygrid-hint').textContent = val + '×' + val + ' coarse / ' + fineVal + '×' + fineVal + ' fine';
       }
+      updateGridInfo(val);
     });
   }
 
@@ -126,6 +138,13 @@ export function setupScannerPresets() {
     $('cfg-sdd').value = p.sdd; $('cfg-sod').value = p.sod;
     $('cfg-detw').value = p.detWidth; $('cfg-deth').value = p.detHeight;
     $('cfg-px').value = p.pixelsX; $('cfg-py').value = p.pixelsY;
-    $('acc-scanner-val').textContent = p.sdd + '/' + p.sod;
+    const accVal = $('acc-scanner-val');
+    if (accVal) {
+      if (p.id !== 'custom') {
+        accVal.textContent = p.name;
+      } else {
+        accVal.textContent = p.sdd + '/' + p.sod;
+      }
+    }
   });
 }
