@@ -193,17 +193,32 @@ func HVLCu(E float64) float64 {
 	return (math.Log(2) / mu) * 10
 }
 
-// RecommendKV estimates the tube voltage (kV) to penetrate maxPenetrationMM.
-func RecommendKV(mat Material, maxPenetrationMM float64, Tmin float64) (kV int, eEff float64, T float64) {
+// RecommendKV estimates the tube voltage (kV) to penetrate maxPenetrationMM
+// using polyenergetic spectrum integration and optional beam filter attenuation.
+// For backward compatibility, when filterLayers is nil, falls back to kV*0.40.
+func RecommendKVWithFilter(mat Material, maxPenetrationMM float64, Tmin float64, filterLayers []FilterLayer) (kV int, eEff float64, T float64) {
 	for kVguess := 50; kVguess <= 500; kVguess += 10 {
-		eEff := float64(kVguess) * 0.40
-		mu := CalcMu(mat, eEff)
+		var keff float64
+		if len(filterLayers) > 0 {
+			// Use polyenergetic effective energy via spectrum integration
+			fe := ComputeEffectiveEnergy(float64(kVguess), filterLayers)
+			keff = fe.EEff
+		} else {
+			keff = float64(kVguess) * 0.40
+		}
+		mu := CalcMu(mat, keff)
 		T := CalcTransmission(mu, maxPenetrationMM)
 		if T >= Tmin {
-			return kVguess, eEff, T
+			return kVguess, keff, T
 		}
 	}
 	return 500, 200.0, 0.0
+}
+
+// RecommendKV estimates the tube voltage (kV) to penetrate maxPenetrationMM.
+// Wrapper for backward compatibility — uses kV*0.40 effective energy with no filter.
+func RecommendKV(mat Material, maxPenetrationMM float64, Tmin float64) (kV int, eEff float64, T float64) {
+	return RecommendKVWithFilter(mat, maxPenetrationMM, Tmin, nil)
 }
 
 // FmtPenetration formats a penetration length (mm) for display.

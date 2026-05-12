@@ -1,6 +1,6 @@
 // FileHandler — file upload, drag-drop, mesh loading
-import { S, $, showError, setStatus } from './state.js';
-import { renderMesh, destroyBeamVisualization, exitCompareMode } from './scene.js';
+import { S, $, showError, setStatus, setOptimizeBtnState } from './state.js';
+import { renderMesh, createBeamVisualization, destroyBeamVisualization, exitCompareMode } from './scene.js';
 import { recalcBeam } from './materials.js';
 import { LoadMeshFromBytes, PickAndLoadMesh, GetVertexBuffer } from '../wailsjs/go/main/App';
 
@@ -35,6 +35,9 @@ async function handleFile(file) {
     if (!info) { showError('Failed to parse mesh'); $('vp-loading').classList.add('hidden'); return; }
     S.meshInfo = info; S.meshLoaded = true;
     const verts = await GetVertexBuffer(); renderMesh(verts);
+    // Pre-create beam visualization (hidden until toggled)
+    createBeamVisualization();
+    if (S.beamGroup) S.beamGroup.visible = false;
     $('fm-name').textContent = file.name;
     $('fm-tris').textContent = info.numTriangles.toLocaleString() + ' triangles';
     $('fm-bbox').textContent = `${info.boundsMinX.toFixed(0)}..${info.boundsMaxX.toFixed(0)}`;
@@ -44,7 +47,7 @@ async function handleFile(file) {
     if (info.isWatertight) { wtDot.className = 'dot dot--green'; wtText.textContent = 'watertight'; wtBanner.classList.add('hidden'); }
     else { wtDot.className = 'dot dot--amber'; wtText.textContent = `${info.boundaryEdges} boundary edges — non-watertight`; wtBanner.textContent = '⚠ Mesh has open edges — results may be unreliable'; wtBanner.classList.remove('hidden'); }
     $('os-text').textContent = 'Ready'; $('os-dot').className = 'os-dot os-dot--ready';
-    $('btn-optimize').disabled = false;
+    setOptimizeBtnState({ enabled: true });
     setStatus(`Loaded ${info.numTriangles.toLocaleString()} tris`);
     $('status-mesh').textContent = info.numTriangles.toLocaleString() + ' tris';
     $('card-tradeoff').classList.add('tradeoff-disabled');
@@ -63,6 +66,9 @@ export async function handlePickedMesh(info) {
   try {
     const verts = await GetVertexBuffer();
     renderMesh(verts);
+    // Pre-create beam visualization (hidden until toggled)
+    createBeamVisualization();
+    if (S.beamGroup) S.beamGroup.visible = false;
     $('fm-name').textContent = info.name;
     $('fm-tris').textContent = info.numTriangles.toLocaleString() + ' triangles';
     $('fm-bbox').textContent = `${info.boundsMinX.toFixed(0)}..${info.boundsMaxX.toFixed(0)}`;
@@ -72,7 +78,7 @@ export async function handlePickedMesh(info) {
     if (info.isWatertight) { wtDot.className = 'dot dot--green'; wtText.textContent = 'watertight'; wtBanner.classList.add('hidden'); }
     else { wtDot.className = 'dot dot--amber'; wtText.textContent = info.boundaryEdges + ' boundary edges — non-watertight'; wtBanner.textContent = '⚠ Mesh has open edges — results may be unreliable'; wtBanner.classList.remove('hidden'); }
     $('os-text').textContent = 'Ready'; $('os-dot').className = 'os-dot os-dot--ready';
-    $('btn-optimize').disabled = false;
+    setOptimizeBtnState({ enabled: true });
     setStatus('Loaded ' + info.numTriangles.toLocaleString() + ' tris');
     $('status-mesh').textContent = info.numTriangles.toLocaleString() + ' tris';
     $('card-tradeoff').classList.add('tradeoff-disabled');
@@ -82,13 +88,17 @@ export async function handlePickedMesh(info) {
 }
 
 export function removeMesh() {
+  if (S.result && !confirm('Remove current mesh and clear all results?')) return;
   if (S.meshObject) { S.scene.remove(S.meshObject); S.meshObject.geometry.dispose(); S.meshObject.material.dispose(); S.meshObject = null; }
   destroyBeamVisualization();
   exitCompareMode();
+  S.renderScene?.();
   S.meshLoaded = false; S.meshInfo = null; S.result = null; S.facePenetrations = null;
   $('file-meta').classList.add('hidden'); $('grid-info').classList.add('hidden'); $('results-panel').classList.add('hidden');
   $('wt-banner').classList.add('hidden'); $('btn-reset-float').classList.add('hidden');
   $('card-tradeoff').style.display = 'none'; $('heatmap-legend').classList.add('hidden');
+  // Clear result warnings (rendered by optimizer.js renderResultWarnings)
+  [].slice.call(document.querySelectorAll('.result-warning')).forEach(el => el.remove());
   $('os-dot').className = 'os-dot os-dot--idle'; $('os-text').textContent = 'Upload a mesh and select a material';
-  $('btn-optimize').disabled = true; setStatus('Ready'); $('status-mesh').textContent = ''; $('idle-prompt').style.display = '';
+  setOptimizeBtnState({ enabled: false, html: '\u25B6 <span>Optimize</span>' }); setStatus('Ready'); $('status-mesh').textContent = ''; $('idle-prompt').style.display = '';
 }

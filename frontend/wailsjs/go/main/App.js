@@ -6,8 +6,8 @@ export function CalcBeamParams(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['CalcBeamParams'](arg1, arg2, arg3, arg4);
 }
 
-export function CalcEnergyRecommendation(arg1, arg2, arg3) {
-  return window['go']['main']['App']['CalcEnergyRecommendation'](arg1, arg2, arg3);
+export function CalcEnergyRecommendation(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['CalcEnergyRecommendation'](arg1, arg2, arg3, arg4);
 }
 
 export function ComputeFaceHeatmap(arg1, arg2) {

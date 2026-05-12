@@ -43,9 +43,15 @@ export function initScene() {
   controls.addEventListener('change', render);
   S.renderScene = render;
   render();
+
+  // Auto-resize viewport when layout changes (results toggle, layout mode, sidebar)
+  // Catches all container size changes without manual calls everywhere
+  const ro = new ResizeObserver(function() { resizeViewport(); });
+  ro.observe(c);
+  S._resizeObserver = ro;
 }
 
-export function resizeViewport() { if (!S.renderer) return; const c = $('viewport'); S.camera.aspect = c.clientWidth / c.clientHeight; S.camera.updateProjectionMatrix(); S.renderer.setSize(c.clientWidth, c.clientHeight); S.renderScene?.(); }
+export function resizeViewport() { if (!S.renderer) return; const c = $('viewport'); const w = c.clientWidth; const h = c.clientHeight; if (w === 0 || h === 0) return; S.camera.aspect = w / h; S.camera.updateProjectionMatrix(); S.renderer.setSize(w, h); S.renderScene?.(); }
 
 export function resetCamera() { if (!S.camera) return; S.camera.position.set(300, 200, 400); S.controls.target.set(0, 0, 0); S.controls.update(); S.renderScene?.(); }
 

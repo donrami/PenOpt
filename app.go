@@ -55,14 +55,17 @@ func (a *App) GetVertexBuffer() []float64 {
 
 // ── Optimization ──
 
+// runRequest matches the frontend's RunRequest struct (now with 5 weights and searchRange).
 type runRequest struct {
-	Weights [3]float64 `json:"weights"`
-	Method  string     `json:"method"`
+	Weights     [5]float64 `json:"weights"` // [w_mtl, w_energy, w_hdn, w_tuy, w_bh]
+	Method      string     `json:"method"`
+	RayGridXY   int        `json:"rayGridXY"` // 0 = use defaults (8 coarse / 16 fine)
+	SearchRange int        `json:"searchRange"` // 0 = default 45°
 }
 
 // RunOptimization starts the grid search asynchronously.
 func (a *App) RunOptimization(req runRequest) (string, error) {
-	return a.Optimizer.Run(a.ctx, app.RunRequest{Weights: req.Weights, Method: req.Method})
+	return a.Optimizer.Run(a.ctx, app.RunRequest{Weights: req.Weights, Method: req.Method, RayGridXY: req.RayGridXY, SearchRange: req.SearchRange})
 }
 
 // EvaluateOrientation evaluates a single orientation (for UI preview).
@@ -84,8 +87,8 @@ func (a *App) CalcBeamParams(energy float64, tPct float64, filterID string, mate
 }
 
 // CalcEnergyRecommendation estimates kV needed for the given penetration.
-func (a *App) CalcEnergyRecommendation(materialID string, maxPenetrationMM float64, tPct float64) string {
-	return a.PhysicsAPI.CalcEnergyRecommendation(materialID, maxPenetrationMM, tPct)
+func (a *App) CalcEnergyRecommendation(materialID string, maxPenetrationMM float64, tPct float64, filterID string) string {
+	return a.PhysicsAPI.CalcEnergyRecommendation(materialID, maxPenetrationMM, tPct, filterID)
 }
 
 // ── Scanner Presets / Heatmap ──

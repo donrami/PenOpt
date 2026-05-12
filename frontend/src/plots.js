@@ -23,7 +23,8 @@ export function setupCanvas(canvasId, defaultWidth, defaultHeight, targetCanvas)
 
 const DEG = Math.PI / 180;
 
-export function drawContourPlot(scores, best, worst, isPartial, targetCanvas) {
+// T1.1: drawContourPlot accepts result to detect constrained optimum
+export function drawContourPlot(scores, best, worst, isPartial, targetCanvas, result) {
   const { ctx, w, h } = setupCanvas('canvas-contour', 236, 176, targetCanvas);
   if (!ctx) return;
 
@@ -214,6 +215,40 @@ export function drawContourPlot(scores, best, worst, isPartial, targetCanvas) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'bottom';
   ctx.fillText('\u03C6 (rotation)', 0, 0);
+  ctx.restore();
+
+  // T1.1: draw search space boundary overlay
+  // Use the actual configured range from the result; fall back to 45° for pre-T5 results
+  const plotRange = (result && result.searchRange > 0) ? result.searchRange : 45;
+  const isConstrained = result && result.constrainedOptimum;
+  ctx.save();
+  ctx.strokeStyle = isConstrained ? 'rgba(245,158,11,0.7)' : 'rgba(255,255,255,0.12)';
+  ctx.lineWidth = isConstrained ? 1.5 : 0.8;
+  ctx.setLineDash(isConstrained ? [4, 4] : [3, 5]);
+  // Vertical boundary lines (θ = -range and θ = +range)
+  // Always draw at the configured boundary position; clip to visible plot area
+  if (tMin <= plotRange && tMax >= -plotRange) {
+    const xNeg = pad.l + ((-plotRange - tMin) / tRange) * pw;
+    const xPos = pad.l + ((plotRange - tMin) / tRange) * pw;
+    if (xNeg > pad.l) {
+      ctx.beginPath(); ctx.moveTo(xNeg, pad.t); ctx.lineTo(xNeg, pad.t + ph); ctx.stroke();
+    }
+    if (xPos < pad.l + pw) {
+      ctx.beginPath(); ctx.moveTo(xPos, pad.t); ctx.lineTo(xPos, pad.t + ph); ctx.stroke();
+    }
+  }
+  // Horizontal boundary lines (φ = -range and φ = +range)
+  if (pMin <= plotRange && pMax >= -plotRange) {
+    const yNeg = pad.t + (1 - (-plotRange - pMin) / pRange) * ph;
+    const yPos = pad.t + (1 - (plotRange - pMin) / pRange) * ph;
+    if (yNeg > pad.t) {
+      ctx.beginPath(); ctx.moveTo(pad.l, yNeg); ctx.lineTo(pad.l + pw, yNeg); ctx.stroke();
+    }
+    if (yPos < pad.t + ph) {
+      ctx.beginPath(); ctx.moveTo(pad.l, yPos); ctx.lineTo(pad.l + pw, yPos); ctx.stroke();
+    }
+  }
+  ctx.setLineDash([]);
   ctx.restore();
 
   if (isPartial) {

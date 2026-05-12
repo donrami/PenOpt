@@ -58,6 +58,29 @@ func FHdn(maxPerProjection []float64) float64 {
 	return aMax - aMin
 }
 
+// FTuy computes the Tuy-Smith completeness for a set of orientations.
+// It returns the fraction of faces that satisfy the Tuy condition for each orientation.
+// Higher is better.
+// Note: This function expects a slice of Tuy completeness values (one per orientation)
+// computed externally (e.g., via search.ComputeTuyCompleteness).
+func FTuy(values []float64) []float64 {
+	// We return the values as-is because they are already in [0,1] and higher is better.
+	// However, we might want to invert it if we want to minimize (like other objectives).
+	// But note: in the optimization, we want to maximize Tuy completeness.
+	// Since our scoring minimizes the score, we will invert it in the calling code
+	// or use (1 - tuy) as the objective to minimize.
+	// For now, we return the values and let the caller decide how to use them.
+	// We'll document that the caller should use (1 - tuy) if they want to minimize.
+	return values
+}
+
+// FBh computes a beam-hardening metric.
+// Placeholder: returns the input values as-is.
+// In the future, this will compute a metric based on polyenergetic spectrum.
+func FBh(values []float64) []float64 {
+	return values
+}
+
 // Normalize scales values to [0,1] range.
 func Normalize(values []float64) []float64 {
 	n := len(values)
@@ -87,26 +110,30 @@ func Normalize(values []float64) []float64 {
 
 // CombinedScore computes the weighted combination of normalized objectives.
 // method: "minimax" = max(w_i * n_i), "weighted" = Σ(w_i * n_i).
-func CombinedScore(fMtlVals, fEnergyVals, fHdnVals []float64,
-	wMtl, wEnergy, wHdn float64, method string) []float64 {
+// Now supports five objectives: fMtl, fEnergy, fHdn, fTuy, fBh.
+func CombinedScore(fMtlVals, fEnergyVals, fHdnVals, fTuyVals, fBhVals []float64,
+	wMtl, wEnergy, wHdn, wTuy, wBh float64, method string) []float64 {
 
 	n := len(fMtlVals)
 	if n == 0 {
 		return nil
 	}
 
+	// Normalize each objective separately
 	nFMtl := Normalize(fMtlVals)
 	nFEnergy := Normalize(fEnergyVals)
 	nFHdn := Normalize(fHdnVals)
+	nFTuy := Normalize(fTuyVals)
+	nFBh := Normalize(fBhVals)
 
 	scores := make([]float64, n)
 	if method == "minimax" {
 		for i := range n {
-			scores[i] = math.Max(wMtl*nFMtl[i], math.Max(wEnergy*nFEnergy[i], wHdn*nFHdn[i]))
+			scores[i] = math.Max(wMtl*nFMtl[i], math.Max(wEnergy*nFEnergy[i], math.Max(wHdn*nFHdn[i], math.Max(wTuy*nFTuy[i], wBh*nFBh[i]))))
 		}
 	} else {
 		for i := range n {
-			scores[i] = wMtl*nFMtl[i] + wEnergy*nFEnergy[i] + wHdn*nFHdn[i]
+			scores[i] = wMtl*nFMtl[i] + wEnergy*nFEnergy[i] + wHdn*nFHdn[i] + wTuy*nFTuy[i] + wBh*nFBh[i]
 		}
 	}
 	return scores

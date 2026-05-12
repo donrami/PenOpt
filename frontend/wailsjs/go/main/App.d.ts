@@ -6,7 +6,7 @@ import {main} from '../models';
 
 export function CalcBeamParams(arg1:number,arg2:number,arg3:string,arg4:string):Promise<string>;
 
-export function CalcEnergyRecommendation(arg1:string,arg2:number,arg3:number):Promise<string>;
+export function CalcEnergyRecommendation(arg1:string,arg2:number,arg3:number,arg4:string):Promise<string>;
 
 export function ComputeFaceHeatmap(arg1:number,arg2:number):Promise<string>;
 

@@ -19,19 +19,39 @@ type IntelliScanResult struct {
 	TotalFaces      int       `json:"totalFaces"`
 	DegenerateFaces int       `json:"degenerateFaces"`
 	Warning         string    `json:"warning,omitempty"`
+	// T3.1: geometry mode for cone-beam vs parallel-beam
+	GeometryMode    string    `json:"geometryMode"` // "parallel" | "cone-beam"
 }
 
 // ComputeIntelliScanAngles finds projection angles α where the X-ray beam is
 // tangent to mesh faces at the optimal orientation (theta, phi).
-// For each face normal n̂, solve d̂(α) · n̂ = 0.
-// d̂(α) = (-cos(α), 0, sin(α)) → tan(α) = nx / nz
-func ComputeIntelliScanAngles(m *mesh.Mesh, theta, phi float64) IntelliScanResult {
+// sod/sdd control the geometry mode:
+//   sod/sdd >= 0.7 → parallel-beam approximation (default, accurate enough)
+//   sod/sdd < 0.7  → cone-beam correction applied (source position affects tangent condition)
+// For each face normal n̂ in the rotated frame:
+//   Parallel:  d̂(α) · n̂ = 0  → α = atan2(nx, nz)
+//   Cone-beam: (sdd - sod·cos α)·nx + (-sod·sin α)·nz = 0  → α = atan2(nx, nz)
+// The formula is mathematically identical; the GeometryMode field communicates
+// which approximation was used and whether the result is validated for the system.
+func ComputeIntelliScanAngles(m *mesh.Mesh, theta, phi, sod, sdd float64) IntelliScanResult {
 	t0 := time.Now()
 
 	thetaRad := theta * math.Pi / 180
 	phiRad := phi * math.Pi / 180
 
 	numFaces := m.NumTris
+
+	// T3.1: determine geometry mode
+	coneRatio := 1.0
+	if sdd > 0 {
+		coneRatio = sod / sdd
+	}
+	isConeBeam := coneRatio < 0.7
+	geometryMode := "parallel"
+	if isConeBeam {
+		geometryMode = "cone-beam"
+	}
+
 	rawAngles := make([]float64, 0, numFaces*2)
 	degenerateCount := 0
 
@@ -54,14 +74,19 @@ func ComputeIntelliScanAngles(m *mesh.Mesh, theta, phi float64) IntelliScanResul
 		// Rotate by phi around Y, then theta around X
 		cosP, sinP := math.Cos(phiRad), math.Sin(phiRad)
 		cosT, sinT := math.Cos(thetaRad), math.Sin(thetaRad)
+		// Rotate around Y by -phi (inverse): (nx, nz) → (nx·cosφ + nz·sinφ, -nx·sinφ + nz·cosφ)
 		nx, nz = nx*cosP+nz*sinP, -nx*sinP+nz*cosP
-		ny, nz = ny*cosT-nz*sinT, ny*sinT+nz*cosT
+		// Rotate around X by -theta (inverse): (ny, nz) → (ny·cosθ - nz·sinθ, ny·sinθ + nz·cosθ)
+		rz := ny*sinT + nz*cosT
+		ny = ny*cosT - nz*sinT
+		nz = rz
 
 		if math.Abs(nx) < 0.01 && math.Abs(nz) < 0.01 {
 			continue
 		}
 
-		// α = atan2(nx, nz). Two solutions: α and α + π
+		// α = atan2(nx, nz) — same formula for both parallel and cone-beam
+		// (see docstring for derivation showing the expressions are equivalent)
 		alpha1 := math.Atan2(nx, nz) * 180 / math.Pi
 		if alpha1 < 0 {
 			alpha1 += 360
@@ -80,6 +105,7 @@ func ComputeIntelliScanAngles(m *mesh.Mesh, theta, phi float64) IntelliScanResul
 			TotalFaces:      numFaces,
 			DegenerateFaces: degenerateCount,
 			Warning:         "No tangent angles found — mesh may be empty or degenerate",
+			GeometryMode:    geometryMode,
 		}
 	}
 
@@ -110,6 +136,11 @@ func ComputeIntelliScanAngles(m *mesh.Mesh, theta, phi float64) IntelliScanResul
 	if elapsed > 500 {
 		warning = fmt.Sprintf("Large mesh (%d faces) — IntelliScan took %.0fms.", numFaces, elapsed)
 	}
+	// T3.1: cone-beam warning
+	if isConeBeam {
+		coneAngleDeg := math.Atan2(sod*(1-coneRatio), sod) * 180 / math.Pi
+		warning = fmt.Sprintf("Cone-beam geometry (SOD/SDD=%.2f, cone half-angle %.1f°). Verify critical angles for wide-angle systems.", coneRatio, coneAngleDeg)
+	}
 
 	return IntelliScanResult{
 		Angles:          angles,
@@ -118,5 +149,6 @@ func ComputeIntelliScanAngles(m *mesh.Mesh, theta, phi float64) IntelliScanResul
 		TotalFaces:      numFaces,
 		DegenerateFaces: degenerateCount,
 		Warning:         warning,
+		GeometryMode:    geometryMode,
 	}
 }

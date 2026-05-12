@@ -1,6 +1,6 @@
 // Bootstrap — initializes all modules and sets up keyboard shortcuts
 import './style.css';
-import { S, $, qsa, showError, setStatus } from './state.js';
+import { S, $, qsa, showError, setStatus, setOptimizeBtnState } from './state.js';
 import { initScene, resizeViewport, resetCamera, switchViewMode, switchLayoutMode, createBeamVisualization, destroyBeamVisualization } from './scene.js';
 import { setupFileUpload, handlePickedMesh } from './filehandler.js';
 import { setupSliders, renderMatGrid, renderFilters, selectMaterial, recalcBeam, setupScannerPresets, setMatFilter } from './materials.js';
@@ -14,7 +14,7 @@ function setupKeyboard() {
     switch (e.key) {
       case 'Escape': $('error-banner').classList.add('hidden'); $('help-overlay').classList.add('hidden'); break;
       case 'o': if (e.ctrlKey) { e.preventDefault(); PickAndLoadMesh().then(info => { if (info) handlePickedMesh(info); }).catch(err => showError('File picker error: ' + err)); } break;
-      case 'Enter': if (e.ctrlKey) { e.preventDefault(); if (!$('btn-optimize').disabled) runOptimization(); } break;
+      case 'Enter': if (e.ctrlKey) { e.preventDefault(); if (!($('btn-optimize')?.disabled ?? true) && !($('btn-optimize-sidebar')?.disabled ?? true)) runOptimization(); } break;
       case 'f': case 'F': toggleFullscreen(); break;
       case 'r': case 'R': resetCamera(); break;
       case '1': switchViewMode('3d'); break;
@@ -38,10 +38,14 @@ function setupHelp() {
 $('btn-error-dismiss').addEventListener('click', () => $('error-banner').classList.add('hidden'));
 
 // ── Bootstrap ──
+function setupTooltips() {
+  // CSS ::after tooltips handle all display.
+  // No native title attribute — that would create double tooltips.
+}
+
 async function init() {
   initScene();
   resizeViewport();
-  window.addEventListener('resize', resizeViewport);
 
   try {
     const [matsJson, filtersJson, presetsJson] = await Promise.all([GetMaterials(), GetFilters(), GetScannerPresets()]);
@@ -49,6 +53,7 @@ async function init() {
     renderMatGrid(); renderFilters();
   } catch (err) { showError('Failed to load database: ' + err.message); }
 
+  setupTooltips();
   setupFileUpload(); setupSliders(); setupAccordion(); setupCardAccordion(); setupHelp(); setupKeyboard();
   setupScannerPresets(); setupTradeoff(); setupExport(); setupPlotTabs();
 
@@ -65,6 +70,7 @@ async function init() {
 
   // Optimize / Stop
   $('btn-optimize').addEventListener('click', runOptimization);
+  $('btn-optimize-sidebar').addEventListener('click', runOptimization);
   $('btn-stop').addEventListener('click', cancelSearch);
 
   // View modes
@@ -82,8 +88,7 @@ async function init() {
   $('btn-beam').addEventListener('click', function() {
     S.beamVisible = !S.beamVisible;
     $('btn-beam').classList.toggle('active', S.beamVisible);
-    if (S.beamVisible) { createBeamVisualization(); }
-    else { destroyBeamVisualization(); }
+    if (S.beamGroup) S.beamGroup.visible = S.beamVisible;
   });
 
   // Default material
@@ -103,6 +108,36 @@ async function init() {
         $('rs-angle').textContent = '\u03B8=' + data.bestOrientation.theta + '\u00B0 \u03C6=' + data.bestOrientation.phi + '\u00B0';
         $('results-panel').classList.remove('hidden');
         $('card-tradeoff').classList.remove('tradeoff-disabled');
+
+        // T1.1 + T1.2: re-render result warnings from persisted data
+        var resultsArea = $('results-content');
+        if (resultsArea) {
+          // Clear existing warnings first
+          [].slice.call(document.querySelectorAll('.result-warning')).forEach(function(el) { el.remove(); });
+          // Constrained optimum warning
+          if (data.constrainedOptimum && data.boundaryWarning) {
+            var warnEl = document.createElement('div');
+            warnEl.className = 'result-warning result-warning--boundary';
+            warnEl.style.cssText = 'margin:0 0 8px 0;padding:8px 12px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.4);border-radius:var(--radius-sm);font-size:11px;color:var(--amber-500);display:flex;align-items:flex-start;gap:8px';
+            warnEl.innerHTML = '<span style="font-size:14px;flex-shrink:0">\u26A0</span><span>' + data.boundaryWarning + '</span>';
+            resultsArea.insertBefore(warnEl, resultsArea.firstChild);
+          }
+          // Non-watertight warning
+          if (S.meshInfo && !S.meshInfo.isWatertight) {
+            var wtEl = document.createElement('div');
+            wtEl.className = 'result-warning result-warning--watertight';
+            wtEl.style.cssText = 'margin:0 0 8px 0;padding:8px 12px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);border-radius:var(--radius-sm);font-size:11px;color:var(--amber-500);display:flex;align-items:flex-start;gap:8px';
+            wtEl.innerHTML = '<span style="font-size:14px;flex-shrink:0">\u26A0</span><span>Mesh has open edges — penetration values may be underestimated.</span>';
+            resultsArea.insertBefore(wtEl, resultsArea.firstChild);
+          }
+        }
+
+        // Restart staggered CSS animation on result cards
+        qsa('.res-card').forEach(function(c) {
+          c.style.animation = 'none';
+          void c.offsetHeight; // force reflow
+          c.style.animation = '';
+        });
         setStatus('Restored previous results');
       }
     } catch (_) {}
@@ -116,12 +151,34 @@ async function init() {
   const resultsContent = $('results-content');
   const resultsCollapseBtn = $('results-collapse-btn');
   if (resultsCollapseBtn && resultsPanel) {
+    // Apply persisted collapsed state
+    if (S.resultsCollapsed) {
+      resultsContent.style.display = 'none';
+      resultsCollapseBtn.innerHTML = '&#x25B2;';
+      resultsCollapseBtn.title = 'Expand results';
+    }
     resultsCollapseBtn.addEventListener('click', function() {
-      const isCollapsed = resultsContent.style.display === 'none';
-      resultsContent.style.display = isCollapsed ? '' : 'none';
-      resultsCollapseBtn.innerHTML = isCollapsed ? '&#x25BC;' : '&#x25B2;';
-      resultsCollapseBtn.title = isCollapsed ? 'Collapse results' : 'Expand results';
+      S.resultsCollapsed = resultsContent.style.display !== 'none';
+      resultsContent.style.display = S.resultsCollapsed ? 'none' : '';
+      resultsCollapseBtn.innerHTML = S.resultsCollapsed ? '&#x25B2;' : '&#x25BC;';
+      resultsCollapseBtn.title = S.resultsCollapsed ? 'Expand results' : 'Collapse results';
+      try { localStorage.setItem('penopt-results-collapsed', S.resultsCollapsed ? '1' : ''); } catch (_) {}
     });
+    // Persist across sessions
+    try {
+      if (localStorage.getItem('penopt-results-collapsed') === '1') {
+        S.resultsCollapsed = true;
+      }
+      var savedRange = localStorage.getItem('penopt-search-range');
+      if (savedRange !== null) {
+        var rangeVal = parseInt(savedRange, 10);
+        if (!isNaN(rangeVal) && rangeVal >= 30 && rangeVal <= 75) {
+          S.searchRange = rangeVal;
+          var rangeInput = $('cfg-searchrange');
+          if (rangeInput) rangeInput.value = rangeVal;
+        }
+      }
+    } catch (_) {}
   }
 }
 

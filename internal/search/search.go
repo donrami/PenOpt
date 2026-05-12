@@ -4,6 +4,7 @@
 package search
 
 import (
+	"fmt"
 	"math"
 	"sort"
 	"time"
@@ -14,20 +15,37 @@ import (
 	"penopt/internal/raycaster"
 )
 
-// coarseThetas are the coarse tilt angles around X (degrees).
-// Matches the original: 7 values at 15° spacing.
-var coarseThetas = []float64{-45, -30, -15, 0, 15, 30, 45}
-
-// coarsePhis are the coarse tilt angles around Y (degrees).
-// Matches the original: 7 values at 15° spacing.
-var coarsePhis = []float64{-45, -30, -15, 0, 15, 30, 45}
-
-// DefaultSearchGrid returns a copy of the default coarse search grid.
-func DefaultSearchGrid() (thetas, phis []float64) {
-	thetas = make([]float64, len(coarseThetas))
-	phis = make([]float64, len(coarsePhis))
-	copy(thetas, coarseThetas)
-	copy(phis, coarsePhis)
+// generateSearchGrid returns coarse θ and φ grids for the given range (degrees).
+// The grid uses 15° steps; ±0° is always included.
+func generateSearchGrid(rangeDeg int) (thetas, phis []float64) {
+	if rangeDeg <= 0 {
+		rangeDeg = 45
+	}
+	if rangeDeg < 30 {
+		rangeDeg = 30
+	}
+	if rangeDeg > 75 {
+		rangeDeg = 75
+	}
+	step := 15.0
+	// Build the list
+	for t := -float64(rangeDeg); t <= float64(rangeDeg)+1e-9; t += step {
+		thetas = append(thetas, t)
+	}
+	// Ensure ±0° is always present (may be skipped if rangeDeg % 15 != 0)
+	hasZero := false
+	for _, v := range thetas {
+		if math.Abs(v) < 1e-9 {
+			hasZero = true
+			break
+		}
+	}
+	if !hasZero {
+		thetas = append(thetas, 0)
+		sort.Float64s(thetas)
+	}
+	phis = make([]float64, len(thetas))
+	copy(phis, thetas)
 	return
 }
 
@@ -44,6 +62,7 @@ type OrientationScore struct {
 	FEnergy          float64   `json:"fEnergy"`
 	FHdn             float64   `json:"fHdn"`
 	FTuy             float64   `json:"fTuy"`
+	FBh              float64   `json:"fBh"`
 	Score            float64   `json:"score"`
 	MaxPerProjection []float64 `json:"maxPerProjection"`
 }
@@ -56,20 +75,30 @@ type OrientationRaw struct {
 	FEnergyRaw       float64
 	FHdnRaw          float64
 	FTuyRaw          float64
+	FBhRaw           float64
 	MaxPerProjection []float64
 }
 
 // Result holds the full optimization result.
 type Result struct {
-	BestOrientation  OrientationScore   `json:"bestOrientation"`
-	WorstOrientation OrientationScore   `json:"worstOrientation"`
-	AllScores        []OrientationScore `json:"allScores"`
-	SearchTimeMs     float64            `json:"searchTimeMs"`
-	CoarseTimeMs     float64            `json:"coarseTimeMs"`
-	FineTimeMs       float64            `json:"fineTimeMs"`
-	NumCoarseEval    int                `json:"numCoarseEval"`
-	NumFineEval      int                `json:"numFineEval"`
-	IntelliScan      *IntelliScanResult `json:"intelliScan,omitempty"`
+	BestOrientation     OrientationScore    `json:"bestOrientation"`
+	WorstOrientation    OrientationScore    `json:"worstOrientation"`
+	AllScores           []OrientationScore  `json:"allScores"`
+	SearchTimeMs        float64             `json:"searchTimeMs"`
+	CoarseTimeMs        float64             `json:"coarseTimeMs"`
+	FineTimeMs          float64             `json:"fineTimeMs"`
+	NumCoarseEval       int                 `json:"numCoarseEval"`
+	NumFineEval         int                 `json:"numFineEval"`
+	IntelliScan         *IntelliScanResult  `json:"intelliScan,omitempty"`
+	// T1.1: constrained optimum detection
+	ConstrainedOptimum  bool                `json:"constrainedOptimum"`
+	BoundaryWarning     string              `json:"boundaryWarning,omitempty"`
+	SearchRange         int                 `json:"searchRange"` // degrees, canonical record of range used
+	// T2.3: coarse/fine convergence
+	CoarseFineMismatch  bool                `json:"coarseFineMismatch"`
+	MismatchNote        string              `json:"mismatchNote,omitempty"`
+	// T3.2: reference orientation comparison
+	ReferenceOrientation *OrientationScore  `json:"referenceOrientation,omitempty"`
 }
 
 // EvaluateSingle evaluates a single orientation (for UI preview / heatmap).
@@ -85,6 +114,14 @@ func EvaluateSingle(bvhTree *bvh.BVH, m *mesh.Mesh, theta, phi float64, cfg rayc
 		fTuy = ComputeTuyCompleteness(m, theta, phi)
 	}
 
+	// Placeholder for beam-hardening metric
+	var fBh float64
+	// For now, we set it to 0. In the future, we can compute a proper metric.
+	// For example, we could compute the variance of the path lengths per projection
+	// as a proxy for beam-hardening variation.
+	// But note: the current FHdn already uses the range of max per projection.
+	// We'll leave it as 0 for now and implement later.
+
 	return OrientationScore{
 		Theta:            theta,
 		Phi:              phi,
@@ -92,6 +129,7 @@ func EvaluateSingle(bvhTree *bvh.BVH, m *mesh.Mesh, theta, phi float64, cfg rayc
 		FEnergy:          fEnergy,
 		FHdn:             fHdn,
 		FTuy:             fTuy,
+		FBh:              fBh,
 		MaxPerProjection: result.MaxPerProjection,
 	}
 }
@@ -100,16 +138,30 @@ func EvaluateSingle(bvhTree *bvh.BVH, m *mesh.Mesh, theta, phi float64, cfg rayc
 type ProgressFn func(idx, total int, theta, phi float64)
 
 // Run executes the coarse→fine grid search.
-// weights: [w_mtl, w_energy, w_hdn]
+// weights: [w_mtl, w_energy, w_hdn, w_tuy, w_bh]
 // method: "weighted" or "minimax"
 // onProgress is called after each orientation (may be nil).
 // m is the mesh used for Tuy completeness computation.
+// rayGridOverride: if > 0, overrides coarse ray grid (fine = min(override*2, 32)).
+// searchRange: degrees, 0 = default 45°.
 func Run(bvhTree *bvh.BVH, m *mesh.Mesh, cfg raycaster.ScannerConfig,
-	weights [3]float64, method string, onProgress ProgressFn) (*Result, error) {
+	weights [5]float64, method string, onProgress ProgressFn, rayGridOverride int, searchRange int) (*Result, error) {
 
 	startTime := time.Now()
 
+	// Resolve and validate search range
+	if searchRange <= 0 {
+		searchRange = 45
+	}
+	if searchRange < 30 {
+		searchRange = 30
+	}
+	if searchRange > 75 {
+		searchRange = 75
+	}
+
 	// ── Phase 1: Coarse search ──
+	coarseThetas, coarsePhis := generateSearchGrid(searchRange)
 	coarseOrientations := make([]Orient, 0, len(coarseThetas)*len(coarsePhis))
 	for _, theta := range coarseThetas {
 		for _, phi := range coarsePhis {
@@ -126,9 +178,18 @@ func Run(bvhTree *bvh.BVH, m *mesh.Mesh, cfg raycaster.ScannerConfig,
 		return nil, nil
 	}
 
+	// Build coarse score map for convergence comparison (T2.3)
+	coarseScoreMap := make(map[string]float64)
+	coarseRawMap := make(map[string]OrientationRaw)
+	coarseNormalized := globalScoreAndNormalize(coarseRaws, weights, method)
+	for i, r := range coarseRaws {
+		key := fmt.Sprintf("%.1f,%.1f", math.Round(r.Theta*10)/10, math.Round(r.Phi*10)/10)
+		coarseScoreMap[key] = coarseNormalized[i]
+		coarseRawMap[key] = r
+	}
+
 	// Find top 3 candidates using provisional ranking (coarse-only normalization)
-	// This is a guide for which regions to refine, not a final ranking.
-	provisionalScores := globalScoreAndNormalize(coarseRaws, weights, method)
+	provisionalScores := coarseNormalized
 	type provisional struct {
 		raw OrientationRaw
 		idx int
@@ -149,9 +210,17 @@ func Run(bvhTree *bvh.BVH, m *mesh.Mesh, cfg raycaster.ScannerConfig,
 
 	// ── Phase 2: Fine search ──
 	fineCfg := cfg
-	fineCfg.RayGridX = 16
-	fineCfg.RayGridY = 16
 	fineCfg.NumProjections = 90
+	// T2.1: fine ray grid = 2x coarse grid, capped at 32
+	fineRayGridXY := 16
+	if rayGridOverride > 0 {
+		fineRayGridXY = rayGridOverride * 2
+		if fineRayGridXY > 32 {
+			fineRayGridXY = 32
+		}
+	}
+	fineCfg.RayGridX = fineRayGridXY
+	fineCfg.RayGridY = fineRayGridXY
 
 	fineSet := make(map[[2]float64]bool)
 	for _, cand := range topCandidates {
@@ -214,6 +283,7 @@ func Run(bvhTree *bvh.BVH, m *mesh.Mesh, cfg raycaster.ScannerConfig,
 			FEnergy:          r.FEnergyRaw,
 			FHdn:             r.FHdnRaw,
 			FTuy:             r.FTuyRaw,
+			FBh:              r.FBhRaw,
 			MaxPerProjection: r.MaxPerProjection,
 		}
 	}
@@ -222,14 +292,18 @@ func Run(bvhTree *bvh.BVH, m *mesh.Mesh, cfg raycaster.ScannerConfig,
 	fMtlVals := make([]float64, len(allRaws))
 	fEnergyVals := make([]float64, len(allRaws))
 	fHdnVals := make([]float64, len(allRaws))
+	fTuyVals := make([]float64, len(allRaws))
+	fBhVals := make([]float64, len(allRaws))
 	for i, r := range allRaws {
 		fMtlVals[i] = r.FMtlRaw
 		fEnergyVals[i] = r.FEnergyRaw
 		fHdnVals[i] = r.FHdnRaw
+		fTuyVals[i] = r.FTuyRaw
+		fBhVals[i] = r.FBhRaw
 	}
 
-	combined := objectives.CombinedScore(fMtlVals, fEnergyVals, fHdnVals,
-		weights[0], weights[1], weights[2], method)
+	combined := objectives.CombinedScore(fMtlVals, fEnergyVals, fHdnVals, fTuyVals, fBhVals,
+		weights[0], weights[1], weights[2], weights[3], weights[4], method)
 
 	for i := range allScores {
 		allScores[i].Score = combined[i]
@@ -249,15 +323,56 @@ func Run(bvhTree *bvh.BVH, m *mesh.Mesh, cfg raycaster.ScannerConfig,
 
 	elapsed := time.Since(startTime).Seconds() * 1000 // ms
 
+	// ── T1.1: Constrained optimum detection ──
+	// Use the actual configured range so the 5° margin is correct
+	boundaryThreshold := float64(searchRange) - 5.0
+	bestTheta := allScores[bestIdx].Theta
+	bestPhi := allScores[bestIdx].Phi
+	constrainedOptimum := false
+	var boundaryWarning string
+	if math.Abs(bestTheta) >= boundaryThreshold || math.Abs(bestPhi) >= boundaryThreshold {
+		constrainedOptimum = true
+		boundaryWarning = fmt.Sprintf(
+			"Best orientation is within 5° of search boundary (±%d°). Consider extending the range to find the true optimum.",
+			searchRange)
+	}
+
+	// ── T2.3: Coarse/fine convergence check ──
+	coarseFineMismatch := false
+	var mismatchNote string
+	bestKey := fmt.Sprintf("%.1f,%.1f", math.Round(bestTheta*10)/10, math.Round(bestPhi*10)/10)
+	if coarseScore, ok := coarseScoreMap[bestKey]; ok {
+		bestScore := allScores[bestIdx].Score
+		diff := math.Abs(bestScore - coarseScore)
+		if diff > 0.01 {
+			coarseFineMismatch = true
+			diffPct := diff * 100
+			mismatchNote = fmt.Sprintf("Fine-resolution evaluation produced %.1f%% different score for top candidate due to ray grid resolution change (coarse: %.3f, fine: %.3f).", diffPct, coarseScore, bestScore)
+		}
+	}
+
+	// ── T3.2: Reference orientation (θ=0°, φ=0°) ──
+	var refOrientation *OrientationScore
+	if bvhTree != nil {
+		refScore := EvaluateSingle(bvhTree, m, 0, 0, fineCfg)
+		refOrientation = &refScore
+	}
+
 	res := &Result{
-		BestOrientation:  allScores[bestIdx],
-		WorstOrientation: allScores[worstIdx],
-		AllScores:        allScores,
-		SearchTimeMs:     elapsed,
-		CoarseTimeMs:     coarseTime,
-		FineTimeMs:       fineTime,
-		NumCoarseEval:    len(coarseOrientations),
-		NumFineEval:      len(fineOrientations),
+		BestOrientation:     allScores[bestIdx],
+		WorstOrientation:    allScores[worstIdx],
+		AllScores:           allScores,
+		SearchTimeMs:        elapsed,
+		CoarseTimeMs:        coarseTime,
+		FineTimeMs:          fineTime,
+		NumCoarseEval:       len(coarseOrientations),
+		NumFineEval:         len(fineOrientations),
+		ConstrainedOptimum:  constrainedOptimum,
+		BoundaryWarning:     boundaryWarning,
+		SearchRange:         searchRange,
+		CoarseFineMismatch:  coarseFineMismatch,
+		MismatchNote:        mismatchNote,
+		ReferenceOrientation: refOrientation,
 	}
 
 	return res, nil
@@ -286,6 +401,10 @@ func evaluateOrientationsRaw(bvhTree *bvh.BVH, m *mesh.Mesh,
 			fTuy = ComputeTuyCompleteness(m, o.Theta, o.Phi)
 		}
 
+		// Placeholder for beam-hardening metric
+		var fBh float64
+		// For now, we set it to 0. In the future, we can compute a proper metric.
+
 		raws = append(raws, OrientationRaw{
 			Theta:            o.Theta,
 			Phi:              o.Phi,
@@ -293,6 +412,7 @@ func evaluateOrientationsRaw(bvhTree *bvh.BVH, m *mesh.Mesh,
 			FEnergyRaw:       fEnergy,
 			FHdnRaw:          fHdn,
 			FTuyRaw:          fTuy,
+			FBhRaw:           fBh,
 			MaxPerProjection: result.MaxPerProjection,
 		})
 
@@ -309,7 +429,7 @@ func evaluateOrientationsRaw(bvhTree *bvh.BVH, m *mesh.Mesh,
 // to a batch of raw objective values. Used for provisional ranking within
 // one batch (e.g., coarse-only ranking for top-3 selection).
 func globalScoreAndNormalize(raws []OrientationRaw,
-	weights [3]float64, method string) []float64 {
+	weights [5]float64, method string) []float64 {
 
 	n := len(raws)
 	scores := make([]float64, n)
@@ -320,12 +440,16 @@ func globalScoreAndNormalize(raws []OrientationRaw,
 	fMtlVals := make([]float64, n)
 	fEnergyVals := make([]float64, n)
 	fHdnVals := make([]float64, n)
+	fTuyVals := make([]float64, n)
+	fBhVals := make([]float64, n)
 	for i, r := range raws {
 		fMtlVals[i] = r.FMtlRaw
 		fEnergyVals[i] = r.FEnergyRaw
 		fHdnVals[i] = r.FHdnRaw
+		fTuyVals[i] = r.FTuyRaw
+		fBhVals[i] = r.FBhRaw
 	}
 
-	return objectives.CombinedScore(fMtlVals, fEnergyVals, fHdnVals,
-		weights[0], weights[1], weights[2], method)
+	return objectives.CombinedScore(fMtlVals, fEnergyVals, fHdnVals, fTuyVals, fBhVals,
+		weights[0], weights[1], weights[2], weights[3], weights[4], method)
 }

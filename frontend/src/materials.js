@@ -12,7 +12,8 @@ export function renderMatGrid() {
     return true;
   });
   for (const m of filtered) {
-    const el = document.createElement('div');
+    const el = document.createElement('button');
+    el.type = 'button';
     el.className = 'mat-item'; el.dataset.id = m.id;
     if (S.materialID === m.id) el.classList.add('active');
     el.innerHTML = `<span class="mat-swatch" style="background:${m.color}"></span><span class="mat-name">${m.name}</span>`;
@@ -47,7 +48,8 @@ export function recalcBeam() {
 export function renderFilters() {
   const grid = $('filter-grid'); grid.innerHTML = '';
   for (const f of S.filters) {
-    const el = document.createElement('div');
+    const el = document.createElement('button');
+    el.type = 'button';
     el.className = 'filter-btn' + (S.filterID === f.id ? ' active' : '');
     el.innerHTML = `<span class="fb-icon">${f.icon}</span><span class="fb-name">${f.name}</span>`;
     el.addEventListener('click', () => selectFilter(f.id));
@@ -78,6 +80,37 @@ export function setupSliders() {
     btn.textContent = v.toFixed(2); btn.addEventListener('click', () => { tSl.value = v; S.tPct = v; recalcBeam(); });
     $('presets-tmin').appendChild(btn);
   });
+
+  // T2.1: Ray Sampling slider
+  const rgSl = $('sl-raygrid');
+  if (rgSl) {
+    rgSl.addEventListener('input', () => {
+      const val = parseInt(rgSl.value);
+      S.rayGridXY = val;
+      if (val === 0) {
+        $('disp-raygrid').textContent = 'default';
+        $('disp-raygrid-hint').textContent = '8×8 coarse / 16×16 fine (default)';
+      } else {
+        $('disp-raygrid').textContent = val + '×' + val;
+        const fineVal = Math.min(val * 2, 32);
+        $('disp-raygrid-hint').textContent = val + '×' + val + ' coarse / ' + fineVal + '×' + fineVal + ' fine';
+      }
+    });
+  }
+
+  // Search Range slider
+  const srSl = $('cfg-searchrange');
+  if (srSl) {
+    srSl.addEventListener('input', () => {
+      const val = parseInt(srSl.value, 10) || 45;
+      S.searchRange = val;
+      $('disp-searchrange').textContent = val + '°';
+      try { localStorage.setItem('penopt-search-range', String(val)); } catch (_) {}
+    });
+    // Sync display in case S.searchRange was restored from localStorage before slider
+    $('disp-searchrange').textContent = S.searchRange + '°';
+    srSl.value = S.searchRange;
+  }
 }
 
 export function setupScannerPresets() {

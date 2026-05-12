@@ -67,7 +67,7 @@ func TestRun_ReturnsResult(t *testing.T) {
 	cfg.RayGridY = 4
 	cfg.NumProjections = 8
 
-	result, err := Run(bvhTree, m, cfg, [3]float64{0.4, 0.4, 0.2}, "weighted", nil)
+	result, err := Run(bvhTree, m, cfg, [3]float64{0.4, 0.4, 0.2}, "weighted", nil, 0, 0)
 	if err != nil {
 		t.Fatalf("Run() returned error: %v", err)
 	}
@@ -134,7 +134,7 @@ func TestRun_WithMesh_ComputesTuy(t *testing.T) {
 	cfg.RayGridY = 4
 	cfg.NumProjections = 8
 
-	result, err := Run(bvhTree, m, cfg, [3]float64{0.4, 0.4, 0.2}, "weighted", nil)
+	result, err := Run(bvhTree, m, cfg, [3]float64{0.4, 0.4, 0.2}, "weighted", nil, 0, 0)
 	if err != nil {
 		t.Fatalf("Run() returned error: %v", err)
 	}

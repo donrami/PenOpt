@@ -9,8 +9,15 @@ export function exportJSON(result) {
   const json = JSON.stringify({
     bestOrientation: result.bestOrientation,
     worstOrientation: result.worstOrientation,
+    allScores: result.allScores,
     numEvaluations: result.allScores.length,
     isPartial: result.isPartial || false,
+    constrainedOptimum: result.constrainedOptimum || false,
+    boundaryWarning: result.boundaryWarning || null,
+    coarseFineMismatch: result.coarseFineMismatch || false,
+    mismatchNote: result.mismatchNote || null,
+    referenceOrientation: result.referenceOrientation || null,
+    intelliScan: result.intelliScan || null,
     timestamp: new Date().toISOString(),
   }, null, 2);
 
@@ -33,8 +40,6 @@ export function exportJSON(result) {
  */
 export function exportPNG(renderer, result, energyText) {
   if (!renderer) return;
-
-  renderer.render(renderer.domElement);
 
   const vpCanvas = renderer.domElement;
   const w = vpCanvas.width;
@@ -67,7 +72,7 @@ export function exportPNG(renderer, result, energyText) {
 
     ctx.fillStyle = '#cdd5e0';
     ctx.font = '13px system-ui, sans-serif';
-    ctx.fillText(`Score: ${best.score.toFixed(3)}  |  Energy: ${energyText || '--'}`, 14, barY + 68);
+    ctx.fillText(`Score: ${best.score.toFixed(3)}  |  Energy: ${energyText || '--'}${result?.constrainedOptimum ? '  |  \u26A0 constrained optimum' : ''}`, 14, barY + 68);
 
     ctx.fillStyle = '#8b95a8';
     ctx.font = '11px monospace';

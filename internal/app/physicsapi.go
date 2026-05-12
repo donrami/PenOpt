@@ -84,13 +84,27 @@ type EnergyRecommendation struct {
 	Label        string  `json:"label"`
 }
 
-func (pa *PhysicsAPI) CalcEnergyRecommendation(materialID string, maxPenetrationMM float64, tPct float64) string {
+// CalcEnergyRecommendation computes kV using spectrum-integrated effective energy
+// with optional beam filter. filterID "none" or empty means unfiltered.
+func (pa *PhysicsAPI) CalcEnergyRecommendation(materialID string, maxPenetrationMM float64, tPct float64, filterID string) string {
 	mat, ok := physics.MaterialByID(materialID)
 	if !ok {
 		return `{"error":"unknown material"}`
 	}
 	tMin := tPct / 100.0
-	kV, eEff, T := physics.RecommendKV(mat, maxPenetrationMM, tMin)
+
+	// T2.2: resolve filter layers from filterID
+	var filterLayers []physics.FilterLayer
+	if filterID != "" && filterID != "none" {
+		for _, f := range physics.Filters() {
+			if f.ID == filterID {
+				filterLayers = f.Layers
+				break
+			}
+		}
+	}
+
+	kV, eEff, T := physics.RecommendKVWithFilter(mat, maxPenetrationMM, tMin, filterLayers)
 
 	label := "Low"
 	if kV > 150 {

@@ -52,6 +52,8 @@ export namespace main {
 	export class runRequest {
 	    weights: number[];
 	    method: string;
+	    rayGridXY: number;
+	    searchRange: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new runRequest(source);
@@ -61,6 +63,8 @@ export namespace main {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.weights = source["weights"];
 	        this.method = source["method"];
+	        this.rayGridXY = source["rayGridXY"];
+	        this.searchRange = source["searchRange"];
 	    }
 	}
 
