@@ -7,15 +7,16 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-  <script type="module" crossorigin src="/assets/index.d5de5beb.js"></script>
-  <link rel="stylesheet" href="/assets/index.d9b940e0.css">
+  <style>.hidden{display:none!important;visibility:hidden!important}.js-tooltip-active [data-tip]::after,.js-tooltip-active [data-tip]::before{display:none!important;content:none!important}</style>
+  <script type="module" crossorigin src="/assets/index.8e739b0b.js"></script>
+  <link rel="stylesheet" href="/assets/index.8306b3c2.css">
 </head>
 <body>
   <div id="app">
     <!-- ═══ HEADER ═══ -->
     <header id="header">
       <div class="header-left">
-        <svg class="header-logo icon--md" viewBox="0 0 100 100" fill="none"><rect width="100" height="100" rx="20" fill="currentColor"/><text x="50" y="68" font-family="sans-serif" font-size="48" font-weight="bold" fill="white" text-anchor="middle">CT</text></svg>
+        <svg class="header-logo" viewBox="0 0 100 100" width="22" height="22" fill="none"><rect width="100" height="100" rx="20" fill="currentColor"/><text x="50" y="68" font-family="sans-serif" font-size="48" font-weight="bold" fill="white" text-anchor="middle">CT</text></svg>
         <h1><span class="accent">Pen</span>Opt</h1>
         <span class="subtitle">CT Scan Orientation Optimizer</span>
       </div>
@@ -29,7 +30,7 @@
 
     <!-- ═══ ERROR BANNER ═══ -->
     <div id="error-banner" class="hidden">
-      <svg class="icon--xs" viewBox="0 0 14 14" fill="none"><path d="M7 1a6 6 0 100 12A6 6 0 007 1zm0 3v3m0 1.5v.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      <svg viewBox="0 0 14 14" width="14" height="14" fill="none"><path d="M7 1a6 6 0 100 12A6 6 0 007 1zm0 3v3m0 1.5v.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
       <span id="error-text"></span>
       <button id="btn-error-dismiss">&times;</button>
     </div>
@@ -62,8 +63,8 @@
         </section>
 
         <!-- Step 2: Material (accordion) -->
-        <section class="card accordion" id="card-material">
-          <div class="card-head">Material<span class="mat-subtitle" id="mat-subtitle"></span> <svg class="chevron" width="8" height="8" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l4 4 4-4"/></svg></div>
+        <section class="card accordion open" id="card-material">
+          <div class="card-head">Material<span class="mat-subtitle" id="mat-subtitle"></span> <svg class="chevron open" width="8" height="8" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l4 4 4-4"/></svg></div>
           <div class="card-body" id="card-material-body">
             <div class="mat-tabs" id="mat-tabs">
               <button class="mat-tab active" data-cat="all">All</button>
@@ -91,8 +92,8 @@
         </section>
 
         <!-- Step 3: Optimize (accordion) -->
-        <section class="card accordion" id="card-optimize">
-          <div class="card-head">Optimize <svg class="chevron" width="8" height="8" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l4 4 4-4"/></svg></div>
+        <section class="card accordion open" id="card-optimize">
+          <div class="card-head">Optimize <svg class="chevron open" width="8" height="8" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l4 4 4-4"/></svg></div>
           <div class="card-body">
             <div class="opt-status" id="opt-status">
               <span class="os-dot os-dot--idle" id="os-dot"></span>
@@ -255,15 +256,10 @@
             <div class="spinner"></div>
             <span>Processing mesh...</span>
           </div>
-          <!-- Camera reset floating button -->
-          <button class="btn-reset-float hidden" id="btn-reset-float" data-tip="Reset camera view">
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 8a6 6 0 0111.2-2.8M14 8a6 6 0 01-11.2 2.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M13 2v3h-3M3 14v-3h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>
-
           <!-- Idle prompt -->
           <div id="idle-prompt">
-            <div class="ip-icon icon--xl">
-              <svg viewBox="0 0 32 32" fill="none"><path d="M16 4v18M8 14l8-8 8 8M4 24v4h24v-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <div class="ip-icon">
+              <svg viewBox="0 0 32 32" width="32" height="32" fill="none"><path d="M16 4v18M8 14l8-8 8 8M4 24v4h24v-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </div>
             <div class="ip-text">Drop your mesh here</div>
             <div class="ip-formats">STL (binary + ASCII) &middot; OBJ &middot; Max 200 MB</div>
