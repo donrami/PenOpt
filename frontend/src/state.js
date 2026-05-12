@@ -17,7 +17,7 @@ export const qsa = (s, p) => [...(p || document).querySelectorAll(s)];
 export const S = {
   meshLoaded: false, meshInfo: null,
   scene: null, camera: null, renderer: null, controls: null,
-  meshObject: null, meshClone: null, beamGroup: null, animFrame: null,
+  meshObject: null, meshClone: null, beamGroup: null, labelsGroup: null, animFrame: null,
   materialID: 'al', filterID: 'none', energy: 76, tPct: 0.1,
   searching: false, searchCancel: false,
   mats: [], filters: [], presets: [],

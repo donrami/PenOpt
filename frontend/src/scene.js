@@ -38,6 +38,10 @@ export function initScene() {
   scene.add(new THREE.AxesHelper(150));
   S.scene = scene; S.camera = camera; S.renderer = renderer; S.controls = controls;
 
+  // Pre-create axis labels (hidden until toggled)
+  createLabels();
+  if (S.labelsGroup) S.labelsGroup.visible = false;
+
   // Render on demand — only when controls change or programmatic updates
   function render() { if (S.renderer) S.renderer.render(S.scene, S.camera); }
   controls.addEventListener('change', render);
@@ -100,7 +104,7 @@ export function animateRotation(mesh, targetTheta, targetPhi, duration = 400) {
 // ── Mesh Rendering ──
 export function renderMesh(verts) {
   if (S.meshObject) { S.scene.remove(S.meshObject); S.meshObject.geometry.dispose(); S.meshObject.material.dispose(); S.meshObject = null; }
-  if (!verts?.length) { $('btn-reset-float').classList.add('hidden'); return; }
+  if (!verts?.length) { return; }
   const pos = new Float32Array(verts);
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
@@ -121,7 +125,6 @@ export function renderMesh(verts) {
   const box = new THREE.Box3().setFromObject(mesh); const sz = box.getSize(new THREE.Vector3());
   const dist = Math.max(sz.x, sz.y, sz.z) * 1.8;
   S.camera.position.set(dist * 0.6, dist * 0.4, dist * 0.8); S.controls.target.set(0, 0, 0); S.controls.update();
-  $('btn-reset-float').classList.remove('hidden');
   S.renderScene?.();
 }
 
@@ -392,5 +395,72 @@ export function destroyBeamVisualization() {
     }
   });
   S.beamGroup = null;
+  S.renderScene?.();
+}
+
+// ── Axis Labels ──
+// Creates sprite-based X, Y, Z axis labels positioned at the axes tips.
+function makeTextSprite(text, color) {
+  var canvas = document.createElement('canvas');
+  canvas.width = 64; canvas.height = 64;
+  var ctx = canvas.getContext('2d');
+  ctx.font = 'Bold 36px Inter, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.shadowColor = 'rgba(0,0,0,0.6)';
+  ctx.shadowBlur = 6;
+  ctx.fillStyle = color;
+  ctx.fillText(text, 32, 32);
+  var tex = new THREE.CanvasTexture(canvas);
+  tex.needsUpdate = true;
+  var mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false, sizeAttenuation: true });
+  var sprite = new THREE.Sprite(mat);
+  sprite.scale.set(30, 30, 1);
+  return sprite;
+}
+
+export function createLabels() {
+  destroyLabels();
+  S.labelsGroup = new THREE.Group();
+
+  var axisLen = 150;
+  var offset = 24; // nudge out past the arrow tip
+
+  var xLabel = makeTextSprite('X', '#e86060');
+  xLabel.position.set(axisLen + offset, 0, 0);
+  S.labelsGroup.add(xLabel);
+
+  var yLabel = makeTextSprite('Y', '#60d060');
+  yLabel.position.set(0, axisLen + offset, 0);
+  S.labelsGroup.add(yLabel);
+
+  var zLabel = makeTextSprite('Z', '#6080e0');
+  zLabel.position.set(0, 0, axisLen + offset);
+  S.labelsGroup.add(zLabel);
+
+  // Origin dot
+  var dotGeo = new THREE.SphereGeometry(3, 8, 8);
+  var dotMat = new THREE.MeshBasicMaterial({ color: 0x8890a0, transparent: true, opacity: 0.5 });
+  var dot = new THREE.Mesh(dotGeo, dotMat);
+  S.labelsGroup.add(dot);
+
+  S.scene.add(S.labelsGroup);
+  S.labelsGroup.visible = S.labelsVisible;
+  S.renderScene?.();
+}
+
+export function destroyLabels() {
+  if (!S.labelsGroup) return;
+  S.scene.remove(S.labelsGroup);
+  S.labelsGroup.traverse(function(child) {
+    if (child.isSprite || child.isMesh) {
+      if (child.geometry) child.geometry.dispose();
+      if (child.material) {
+        if (Array.isArray(child.material)) child.material.forEach(function(m) { m.dispose(); });
+        else child.material.dispose();
+      }
+    }
+  });
+  S.labelsGroup = null;
   S.renderScene?.();
 }

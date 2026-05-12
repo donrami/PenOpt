@@ -1,7 +1,64 @@
+// ── Scrollbar fix for Plasma/KDE overlay scrollbars ──
+// Forces consistent 6px scrollbars on all scrollable elements, preventing
+// the KDE compositor from injecting widening overlay scrollbars on Wayland.
+(function enforceScrollbars() {
+  var enforced = false;
+
+  function apply() {
+    var targets = document.querySelectorAll(
+      'html, body, #sidebar, #results-content, #mat-grid, ' +
+      '.is-table-wrap, .help-body, .acc-body'
+    );
+    targets.forEach(function(el) {
+      // Inline style wins over CSS — use !important to prevent enlargement
+      el.style.setProperty('scrollbar-width', 'thin', 'important');
+      el.style.setProperty('scrollbar-color',
+        getComputedStyle(document.documentElement).getPropertyValue('--border-light').trim() || '#353850'
+        + ' ' +
+        (getComputedStyle(document.documentElement).getPropertyValue('--bg2').trim() || '#13151e'),
+        'important'
+      );
+    });
+
+    var webkitTargets = [
+      'html', 'body',
+      '#sidebar', '#results-content', '#mat-grid',
+      '.is-table-wrap', '.help-body', '.acc-body'
+    ];
+    webkitTargets.forEach(function(sel) {
+      var el = document.querySelector(sel);
+      if (!el) return;
+      // Force thumb to stay 6px wide on hover via inline style
+      var style = el.style;
+      style.setProperty('--sb-w', '6px');
+      style.setProperty('--sb-h', '6px');
+    });
+  }
+
+  function tryApply() {
+    if (document.body) {
+      apply();
+      enforced = true;
+    } else if (!enforced) {
+      requestAnimationFrame(tryApply);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', tryApply);
+  if (document.readyState !== 'loading') tryApply();
+
+  // Re-apply on dynamic content changes (e.g. new scrollable containers)
+  if (typeof MutationObserver !== 'undefined') {
+    new MutationObserver(function() {
+      if (!enforced && document.body) { apply(); enforced = true; }
+    }).observe(document.documentElement, { childList: true, subtree: true });
+  }
+})();
+
 // Bootstrap — initializes all modules and sets up keyboard shortcuts
 import './style.css';
 import { S, $, qsa, showError, setStatus, setOptimizeBtnState } from './state.js';
-import { initScene, resizeViewport, resetCamera, switchViewMode, switchLayoutMode, createBeamVisualization, destroyBeamVisualization } from './scene.js';
+import { initScene, resizeViewport, resetCamera, switchViewMode, switchLayoutMode, createBeamVisualization, destroyBeamVisualization, createLabels, destroyLabels } from './scene.js';
 import { setupFileUpload, handlePickedMesh } from './filehandler.js';
 import { setupSliders, renderMatGrid, renderFilters, selectMaterial, recalcBeam, setupScannerPresets, setMatFilter } from './materials.js';
 import { setupAccordion, setupCardAccordion, setupTradeoff, setupExport, setupPlotTabs, runOptimization, cancelSearch } from './optimizer.js';
@@ -39,8 +96,126 @@ $('btn-error-dismiss').addEventListener('click', () => $('error-banner').classLi
 
 // ── Bootstrap ──
 function setupTooltips() {
-  // CSS ::after tooltips handle all display.
-  // No native title attribute — that would create double tooltips.
+  // Suppress CSS tooltips when JS is active
+  document.body.classList.add('js-tooltip-active');
+
+  var tooltipEl = null;
+  var tooltipTarget = null;
+
+  // Shared hidden measuring element — prevents repeated DOM thrash
+  var measEl = document.createElement('div');
+  measEl.style.cssText = 'position:fixed;top:-9999px;left:-9999px;visibility:hidden;padding:4px 8px;font-size:10px;font-weight:500;font-family:var(--font,Inter,sans-serif);line-height:1.4;max-width:300px;white-space:nowrap';
+  document.body.appendChild(measEl);
+
+  function measureTooltip(text) {
+    measEl.textContent = text;
+    var rect = measEl.getBoundingClientRect();
+    return { width: rect.width, height: rect.height };
+  }
+
+  function createTooltip(text) {
+    var el = document.createElement('div');
+    el.className = 'js-tooltip';
+    el.textContent = text;
+    el.style.cssText = 'position:fixed;top:-9999px;left:-9999px;padding:4px 8px;background:var(--surface,#1e2130);color:var(--text,#dde0ed);border:1px solid var(--border-light,#353850);border-radius:4px;font-size:10px;font-weight:500;font-family:var(--font,Inter,sans-serif);white-space:nowrap;pointer-events:none;z-index:9999;box-shadow:0 10px 20px rgba(0,0,0,0.45),0 4px 8px rgba(0,0,0,0.3);line-height:1.4;opacity:0;max-width:300px;overflow:hidden;text-overflow:ellipsis';
+    document.body.appendChild(el);
+    return el;
+  }
+
+  function positionTooltip(el, target, text) {
+    // Measure first via hidden element (avoids layout thrash on the visible tooltip)
+    var dims = measureTooltip(text);
+    var tipW = dims.width;
+    var tipH = dims.height;
+
+    var rect = target.getBoundingClientRect();
+    var gap = 6;
+    var vw = window.innerWidth;
+    var vh = window.innerHeight;
+
+    var spaceAbove = rect.top - gap;
+    var spaceBelow = vh - rect.bottom - gap;
+
+    var above;
+    // Vertical: prefer above, flip below if not enough room
+    if (spaceAbove >= tipH) {
+      above = rect.top - tipH - gap;
+    } else if (spaceBelow >= tipH) {
+      above = rect.bottom + gap;
+    } else {
+      // Neither side has full room — use the side with more space
+      above = spaceAbove >= spaceBelow
+        ? rect.top - tipH - gap
+        : rect.bottom + gap;
+    }
+
+    // Horizontal: center on target, clamp to viewport with padding
+    var centerX = rect.left + rect.width / 2 - tipW / 2;
+    var left = Math.max(4, Math.min(centerX, vw - tipW - 4));
+
+    // Edge-nudge: when target is near the viewport edge, align tooltip
+    // to the target's side rather than centering in void space
+    if (left === 4 && centerX < 4) {
+      left = Math.max(4, rect.left + 4);
+    } else if (left === vw - tipW - 4 && centerX > vw - tipW - 4) {
+      left = Math.min(vw - tipW - 4, rect.right - tipW - 4);
+    }
+
+    // Apply position
+    el.style.left = left + 'px';
+    el.style.top = above + 'px';
+    el.style.opacity = '1';
+
+    // Arrow
+    var arrowDir = (above < rect.top) ? 'bottom' : 'top';
+    var arrowSize = 4;
+    var arrowLeft = rect.left + rect.width / 2 - left;
+
+    var existingArrow = el.querySelector('.js-tip-arrow');
+    var arrowDiv = existingArrow || document.createElement('div');
+    arrowDiv.className = 'js-tip-arrow';
+    arrowDiv.style.cssText = 'position:absolute;pointer-events:none;z-index:1;' +
+      (arrowDir === 'bottom'
+        ? 'bottom:-' + (arrowSize * 2) + 'px;left:' + arrowLeft + 'px;border:' + arrowSize + 'px solid transparent;border-top-color:var(--border-light,#353850)'
+        : 'top:-' + (arrowSize * 2) + 'px;left:' + arrowLeft + 'px;border:' + arrowSize + 'px solid transparent;border-bottom-color:var(--border-light,#353850)');
+    if (!existingArrow) el.appendChild(arrowDiv);
+  }
+
+  document.addEventListener('mouseenter', function(e) {
+    var target = e.target.closest('[data-tip]');
+    if (!target) return;
+    var text = target.getAttribute('data-tip');
+    if (!text) return;
+
+    // Dismiss previous
+    if (tooltipEl) {
+      tooltipEl.remove();
+      tooltipEl = null;
+    }
+
+    tooltipEl = createTooltip(text);
+    tooltipTarget = target;
+    positionTooltip(tooltipEl, target, text);
+  }, true);
+
+  document.addEventListener('mouseleave', function(e) {
+    var target = e.target.closest('[data-tip]');
+    if (!target) return;
+    if (tooltipEl) {
+      tooltipEl.remove();
+      tooltipEl = null;
+    }
+    tooltipTarget = null;
+  }, true);
+
+  // Reposition on scroll/resize while active
+  function reposition() {
+    if (tooltipEl && tooltipTarget && document.body.contains(tooltipTarget)) {
+      positionTooltip(tooltipEl, tooltipTarget, tooltipEl.textContent);
+    }
+  }
+  window.addEventListener('scroll', reposition, { capture: true, passive: true });
+  window.addEventListener('resize', reposition, { passive: true });
 }
 
 async function init() {
@@ -79,16 +254,24 @@ async function init() {
 
   // Buttons
   $('btn-reset-cam').addEventListener('click', resetCamera);
-  $('btn-reset-float').addEventListener('click', resetCamera);
   $('btn-fullscreen').addEventListener('click', toggleFullscreen);
   $('btn-labels').addEventListener('click', function() {
     S.labelsVisible = !S.labelsVisible;
     $('btn-labels').classList.toggle('active', S.labelsVisible);
+    if (S.labelsGroup) {
+      S.labelsGroup.visible = S.labelsVisible;
+      S.renderScene?.();
+    } else {
+      createLabels();
+    }
   });
   $('btn-beam').addEventListener('click', function() {
     S.beamVisible = !S.beamVisible;
     $('btn-beam').classList.toggle('active', S.beamVisible);
-    if (S.beamGroup) S.beamGroup.visible = S.beamVisible;
+    if (S.beamGroup) {
+      S.beamGroup.visible = S.beamVisible;
+      S.renderScene?.();
+    }
   });
 
   // Default material

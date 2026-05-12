@@ -1,6 +1,6 @@
 // FileHandler — file upload, drag-drop, mesh loading
 import { S, $, showError, setStatus, setOptimizeBtnState } from './state.js';
-import { renderMesh, createBeamVisualization, destroyBeamVisualization, exitCompareMode } from './scene.js';
+import { renderMesh, createBeamVisualization, destroyBeamVisualization, destroyLabels, exitCompareMode } from './scene.js';
 import { recalcBeam } from './materials.js';
 import { LoadMeshFromBytes, PickAndLoadMesh, GetVertexBuffer } from '../wailsjs/go/main/App';
 
@@ -62,8 +62,20 @@ async function handleFile(file) {
     // Auto-open Material + Optimize cards
     const matCard = $('card-material');
     const optCard = $('card-optimize');
-    if (matCard) { matCard.classList.add('open'); matCard.querySelector('.chevron')?.classList.add('open'); }
-    if (optCard) { optCard.classList.add('open'); optCard.querySelector('.chevron')?.classList.add('open'); }
+    if (matCard) {
+      var matBody = matCard.querySelector('.card-body');
+      if (matBody) { matBody.classList.add('no-animate'); matBody.style.maxHeight = ''; }
+      matCard.classList.add('open');
+      matCard.querySelector('.chevron')?.classList.add('open');
+      if (matBody) { void matBody.offsetHeight; matBody.classList.remove('no-animate'); }
+    }
+    if (optCard) {
+      var optBody = optCard.querySelector('.card-body');
+      if (optBody) { optBody.classList.add('no-animate'); optBody.style.maxHeight = ''; }
+      optCard.classList.add('open');
+      optCard.querySelector('.chevron')?.classList.add('open');
+      if (optBody) { void optBody.offsetHeight; optBody.classList.remove('no-animate'); }
+    }
     // Update sidebar progress
     const sp = $('sidebar-progress');
     if (sp) sp.textContent = 'Step 2 of 3 — Configure material';
@@ -109,8 +121,20 @@ export async function handlePickedMesh(info) {
     // Auto-open Material + Optimize cards
     const matCard = $('card-material');
     const optCard = $('card-optimize');
-    if (matCard) { matCard.classList.add('open'); matCard.querySelector('.chevron')?.classList.add('open'); }
-    if (optCard) { optCard.classList.add('open'); optCard.querySelector('.chevron')?.classList.add('open'); }
+    if (matCard) {
+      var matBody = matCard.querySelector('.card-body');
+      if (matBody) { matBody.classList.add('no-animate'); matBody.style.maxHeight = ''; }
+      matCard.classList.add('open');
+      matCard.querySelector('.chevron')?.classList.add('open');
+      if (matBody) { void matBody.offsetHeight; matBody.classList.remove('no-animate'); }
+    }
+    if (optCard) {
+      var optBody = optCard.querySelector('.card-body');
+      if (optBody) { optBody.classList.add('no-animate'); optBody.style.maxHeight = ''; }
+      optCard.classList.add('open');
+      optCard.querySelector('.chevron')?.classList.add('open');
+      if (optBody) { void optBody.offsetHeight; optBody.classList.remove('no-animate'); }
+    }
     // Update sidebar progress
     const sp = $('sidebar-progress');
     if (sp) sp.textContent = 'Step 2 of 3 — Configure material';
@@ -123,11 +147,12 @@ export function removeMesh() {
   if (!confirm('Remove mesh and clear all results?')) return;
   if (S.meshObject) { S.scene.remove(S.meshObject); S.meshObject.geometry.dispose(); S.meshObject.material.dispose(); S.meshObject = null; }
   destroyBeamVisualization();
+  destroyLabels();
   exitCompareMode();
   S.renderScene?.();
   S.meshLoaded = false; S.meshInfo = null; S.result = null; S.facePenetrations = null;
   $('file-meta').classList.add('hidden'); $('grid-info').classList.add('hidden'); $('results-panel').classList.add('hidden');
-  $('wt-banner').classList.add('hidden'); $('btn-reset-float').classList.add('hidden');
+  $('wt-banner').classList.add('hidden');
   $('card-tradeoff').style.display = 'none'; $('heatmap-legend').classList.add('hidden');
   const wtRow = $('wt-sidebar-row');
   if (wtRow) wtRow.classList.add('hidden');
@@ -138,9 +163,14 @@ export function removeMesh() {
   // Reset sidebar progress
   const sp = $('sidebar-progress');
   if (sp) sp.textContent = 'Step 1 of 3 — Load a mesh to begin';
-  // Close Material + Optimize cards
+  // Close Material + Optimize cards (suppress transitions during programmatic close)
   ['card-material', 'card-optimize'].forEach(function(id) {
     const card = $(id);
-    if (card) { card.classList.remove('open'); card.querySelector('.chevron')?.classList.remove('open'); }
+    if (!card) return;
+    var cb = card.querySelector('.card-body');
+    if (cb) { cb.classList.add('no-animate'); cb.style.maxHeight = ''; }
+    card.classList.remove('open');
+    card.querySelector('.chevron')?.classList.remove('open');
+    if (cb) { void cb.offsetHeight; cb.classList.remove('no-animate'); }
   });
 }
