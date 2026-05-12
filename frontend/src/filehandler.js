@@ -1,5 +1,5 @@
 // FileHandler — file upload, drag-drop, mesh loading
-import { S, $, showError, setStatus, setOptimizeBtnState } from './state.js';
+import { S, $, showError, setStatus, setOptimizeBtnState, showConfirm, invalidateResults, clearStaleResults } from './state.js';
 import { renderMesh, createBeamVisualization, destroyBeamVisualization, destroyLabels, exitCompareMode } from './scene.js';
 import { recalcBeam } from './materials.js';
 import { LoadMeshFromBytes, PickAndLoadMesh, GetVertexBuffer } from '../wailsjs/go/main/App';
@@ -42,6 +42,7 @@ async function handleFile(file) {
     $('fm-tris').textContent = info.numTriangles.toLocaleString() + ' triangles';
     $('fm-bbox').textContent = `${info.boundsMinX.toFixed(0)}..${info.boundsMaxX.toFixed(0)}`;
     $('file-meta').classList.remove('hidden');
+    $('drop-zone').classList.add('hidden');
     $('grid-info').classList.remove('hidden');
     const wtDot = $('fm-dot'), wtText = $('fm-wt'), wtBanner = $('wt-banner'), wtRow = $('wt-sidebar-row'), wtRowText = $('wt-sidebar-text');
     if (info.isWatertight) {
@@ -76,10 +77,9 @@ async function handleFile(file) {
       optCard.querySelector('.chevron')?.classList.add('open');
       if (optBody) { void optBody.offsetHeight; optBody.classList.remove('no-animate'); }
     }
-    // Update sidebar progress
-    const sp = $('sidebar-progress');
-    if (sp) sp.textContent = 'Step 2 of 3 — Configure material';
     $('vp-loading').classList.add('hidden');
+    // New mesh invalidates any previous results
+    invalidateResults();
     // Persist mesh info
     try { localStorage.setItem('penopt-last-mesh', file.name); } catch (_) {}
   } catch (err) { showError('Load error: ' + err.message); $('vp-loading').classList.add('hidden'); }
@@ -99,8 +99,9 @@ export async function handlePickedMesh(info) {
     if (S.beamGroup) S.beamGroup.visible = false;
     $('fm-name').textContent = info.name;
     $('fm-tris').textContent = info.numTriangles.toLocaleString() + ' triangles';
-    $('fm-bbox').textContent = `${info.boundsMinX.toFixed(0)}..${info.boundsMaxX.toFixed(0)}`;
+    $('fm-bbox').textContent = `${info.extentX.toFixed(0)} × ${info.extentY.toFixed(0)} × ${info.extentZ.toFixed(0)} mm`;
     $('file-meta').classList.remove('hidden');
+    $('drop-zone').classList.add('hidden');
     $('grid-info').classList.remove('hidden');
     const wtDot = $('fm-dot'), wtText = $('fm-wt'), wtBanner = $('wt-banner'), wtRow = $('wt-sidebar-row'), wtRowText = $('wt-sidebar-text');
     if (info.isWatertight) {
@@ -135,23 +136,23 @@ export async function handlePickedMesh(info) {
       optCard.querySelector('.chevron')?.classList.add('open');
       if (optBody) { void optBody.offsetHeight; optBody.classList.remove('no-animate'); }
     }
-    // Update sidebar progress
-    const sp = $('sidebar-progress');
-    if (sp) sp.textContent = 'Step 2 of 3 — Configure material';
     try { localStorage.setItem('penopt-last-mesh', info.name); } catch (_) {}
   } catch (err) { showError('Render error: ' + err.message); }
   $('vp-loading').classList.add('hidden');
+  // New mesh invalidates any previous results
+  invalidateResults();
 }
 
-export function removeMesh() {
-  if (!confirm('Remove mesh and clear all results?')) return;
+export async function removeMesh() {
+  const confirmed = await showConfirm('Remove mesh and clear all results?');
+  if (!confirmed) return;
   if (S.meshObject) { S.scene.remove(S.meshObject); S.meshObject.geometry.dispose(); S.meshObject.material.dispose(); S.meshObject = null; }
   destroyBeamVisualization();
   destroyLabels();
   exitCompareMode();
   S.renderScene?.();
   S.meshLoaded = false; S.meshInfo = null; S.result = null; S.facePenetrations = null;
-  $('file-meta').classList.add('hidden'); $('grid-info').classList.add('hidden'); $('results-panel').classList.add('hidden');
+  $('file-meta').classList.add('hidden'); $('drop-zone').classList.remove('hidden'); $('grid-info').classList.add('hidden'); $('results-panel').classList.add('hidden');
   $('wt-banner').classList.add('hidden');
   $('card-tradeoff').style.display = 'none'; $('heatmap-legend').classList.add('hidden');
   const wtRow = $('wt-sidebar-row');
@@ -160,9 +161,8 @@ export function removeMesh() {
   [].slice.call(document.querySelectorAll('.result-warning')).forEach(el => el.remove());
   $('os-dot').className = 'os-dot os-dot--idle'; $('os-text').textContent = 'Upload a mesh and select a material';
   setOptimizeBtnState({ enabled: false, html: '\u25B6 <span>Optimize</span>' }); setStatus('Ready'); $('status-mesh').textContent = ''; $('idle-prompt').style.display = '';
-  // Reset sidebar progress
-  const sp = $('sidebar-progress');
-  if (sp) sp.textContent = 'Step 1 of 3 — Load a mesh to begin';
+  clearStaleResults();
+
   // Close Material + Optimize cards (suppress transitions during programmatic close)
   ['card-material', 'card-optimize'].forEach(function(id) {
     const card = $(id);

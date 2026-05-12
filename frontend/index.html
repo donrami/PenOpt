@@ -7,13 +7,14 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>.hidden{display:none!important;visibility:hidden!important}.js-tooltip-active [data-tip]::after,.js-tooltip-active [data-tip]::before{display:none!important;content:none!important}</style>
 </head>
 <body>
   <div id="app">
     <!-- ═══ HEADER ═══ -->
     <header id="header">
       <div class="header-left">
-        <svg class="header-logo icon--md" viewBox="0 0 100 100" fill="none"><rect width="100" height="100" rx="20" fill="currentColor"/><text x="50" y="68" font-family="sans-serif" font-size="48" font-weight="bold" fill="white" text-anchor="middle">CT</text></svg>
+        <svg class="header-logo" viewBox="0 0 100 100" width="22" height="22" fill="none"><rect width="100" height="100" rx="20" fill="currentColor"/><text x="50" y="68" font-family="sans-serif" font-size="48" font-weight="bold" fill="white" text-anchor="middle">CT</text></svg>
         <h1><span class="accent">Pen</span>Opt</h1>
         <span class="subtitle">CT Scan Orientation Optimizer</span>
       </div>
@@ -27,20 +28,34 @@
 
     <!-- ═══ ERROR BANNER ═══ -->
     <div id="error-banner" class="hidden">
-      <svg class="icon--xs" viewBox="0 0 14 14" fill="none"><path d="M7 1a6 6 0 100 12A6 6 0 007 1zm0 3v3m0 1.5v.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      <svg viewBox="0 0 14 14" width="14" height="14" fill="none"><path d="M7 1a6 6 0 100 12A6 6 0 007 1zm0 3v3m0 1.5v.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
       <span id="error-text"></span>
       <button id="btn-error-dismiss">&times;</button>
+    </div>
+
+    <!-- ═══ CONFIRM DIALOG ═══ -->
+    <div id="confirm-overlay" class="hidden">
+      <div id="confirm-card">
+        <div class="confirm-body">
+          <div class="confirm-icon">
+            <svg viewBox="0 0 20 20" width="20" height="20" fill="none"><path d="M10 1a9 9 0 100 18 9 9 0 000-18zm0 3v6m0 3v.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <div class="confirm-text" id="confirm-text">Remove mesh and clear all results?</div>
+        </div>
+        <div class="confirm-actions">
+          <button class="confirm-btn confirm-btn--cancel" id="confirm-cancel">Cancel</button>
+          <button class="confirm-btn confirm-btn--danger" id="confirm-ok">Remove</button>
+        </div>
+      </div>
     </div>
 
     <!-- ═══ LAYOUT ═══ -->
     <div id="layout">
       <!-- ─── SIDEBAR ─── -->
       <aside id="sidebar">
-        <!-- Progress indicator -->
-        <div class="sidebar-progress" id="sidebar-progress">Step 1 of 3 — Load a mesh to begin</div>
-        <!-- Step 1: Upload (always open) -->
+        <!-- Upload (always open) -->
         <section class="card" id="card-upload">
-          <div class="card-head">Upload <svg class="chevron" style="display:none" width="8" height="8" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l4 4 4-4"/></svg></div>
+          <div class="card-head">Mesh <svg class="chevron" style="display:none" width="8" height="8" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l4 4 4-4"/></svg></div>
           <div class="card-body">
             <div id="drop-zone">
               <svg width="28" height="28" viewBox="0 0 14 14" fill="none"><path d="M7 1v9M3 5l4-4 4 4M2 10v2h10v-2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -51,17 +66,17 @@
             <div id="file-meta" class="hidden">
               <div class="fm-row"><span class="fm-name" id="fm-name"></span></div>
               <div class="fm-row"><span id="fm-tris"></span></div>
+              <div class="fm-row"><span id="fm-bbox"></span></div>
               <div class="fm-row" id="fm-wt-row"><span class="dot-wrap" data-tip="Watertight"><span id="fm-dot" class="dot dot--green"></span></span><span id="fm-wt">watertight</span></div>
               <div id="wt-sidebar-row" class="hidden"><span class="wt-icon">⚠</span><span id="wt-sidebar-text"></span></div>
-              <div class="fm-row"><span id="fm-bbox"></span></div>
               <button class="fm-remove" id="btn-remove">Remove</button>
             </div>
           </div>
         </section>
 
-        <!-- Step 2: Material (accordion) -->
-        <section class="card accordion" id="card-material">
-          <div class="card-head">Material<span class="mat-subtitle" id="mat-subtitle"></span> <svg class="chevron" width="8" height="8" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l4 4 4-4"/></svg></div>
+        <!-- Material (accordion) -->
+        <section class="card accordion open" id="card-material">
+          <div class="card-head">Material<span class="mat-subtitle" id="mat-subtitle"></span> <svg class="chevron open" width="8" height="8" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l4 4 4-4"/></svg></div>
           <div class="card-body" id="card-material-body">
             <div class="mat-tabs" id="mat-tabs">
               <button class="mat-tab active" data-cat="all">All</button>
@@ -85,24 +100,6 @@
               <div class="skeleton skeleton--sm"></div>
               <div class="skeleton skeleton--sm"></div>
             </div>
-          </div>
-        </section>
-
-        <!-- Step 3: Optimize (accordion) -->
-        <section class="card accordion" id="card-optimize">
-          <div class="card-head">Optimize <svg class="chevron" width="8" height="8" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l4 4 4-4"/></svg></div>
-          <div class="card-body">
-            <div class="opt-status" id="opt-status">
-              <span class="os-dot os-dot--idle" id="os-dot"></span>
-              <span id="os-text">Upload a mesh and select a material</span>
-            </div>
-            <div id="grid-info" class="hidden">32&sup2; rays &middot; coarse + fine &middot; ~30s-2min</div>
-            <div id="restore-banner" class="hidden">
-              <span>Previous results available.</span>
-              <button id="btn-restore">Restore</button>
-              <button id="btn-restore-dismiss" class="restore-dismiss">Dismiss</button>
-            </div>
-            <button class="btn btn-primary w-full mt-3" id="btn-optimize-sidebar" disabled data-tip="Run optimization search">▶ <span>Optimize</span></button>
           </div>
         </section>
 
@@ -188,6 +185,19 @@
           </div>
         </section>
 
+        <!-- Optimize (accordion) -->
+        <section class="card accordion open" id="card-optimize">
+          <div class="card-head">Optimize <svg class="chevron open" width="8" height="8" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l4 4 4-4"/></svg></div>
+          <div class="card-body">
+            <div class="opt-status" id="opt-status">
+              <span class="os-dot os-dot--idle" id="os-dot"></span>
+              <span id="os-text">Upload a mesh and select a material</span>
+            </div>
+            <div id="grid-info" class="hidden">32&sup2; rays &middot; coarse + fine &middot; ~30s-2min</div>
+            <button class="btn btn-primary w-full mt-3" id="btn-optimize-sidebar" disabled data-tip="Run optimization search">▶ <span>Optimize</span></button>
+          </div>
+        </section>
+
         <!-- Error banner (sidebar bottom) -->
         <div id="sidebar-error" class="hidden"></div>
       </aside>
@@ -196,39 +206,34 @@
       <main id="viewport-area">
         <!-- Viewport header bar -->
         <div id="vp-header">
-          <div class="vp-header-row vp-header-row--main">
-            <button class="btn btn-primary" id="btn-optimize" disabled>&#x25B6; <span>Optimize</span></button>
-            <div class="vp-progress hidden" id="vp-progress">
-              <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
-              <span class="progress-label" id="progress-label">0%</span>
-              <button class="btn btn-stop" id="btn-stop">&#x25A0; Stop</button>
-            </div>
-            <span style="flex:1"></span>
-            <span class="hud-rot hidden" id="hud-rot">&theta;: 0&deg; &phi;: 0&deg;</span>
-            <div class="vp-mode-group" id="vp-mode-group">
-              <button class="vp-mode-btn active" data-mode="3d" data-tip="Default mesh view">3D</button>
-              <button class="vp-mode-btn" data-mode="heatmap" data-tip="Color faces by penetration">Heat</button>
-              <button class="vp-mode-btn" data-mode="compare" data-tip="Ghost overlay compare">Cmp</button>
-            </div>
-            <div class="vp-layout-group" id="vp-layout-group">
-              <button class="vp-layout-btn active" data-layout="default" data-tip="Default — sidebar + viewport + results">Dflt</button>
-              <button class="vp-layout-btn" data-layout="viewport" data-tip="Viewport only">VP</button>
-              <button class="vp-layout-btn" data-layout="results" data-tip="Viewport + results, no sidebar">Res</button>
-              <button class="vp-layout-btn" data-layout="all" data-tip="All panels">All</button>
-            </div>
+          <button class="btn btn-primary" id="btn-optimize" disabled>&#x25B6; <span>Optimize</span></button>
+          <div class="vp-progress hidden" id="vp-progress">
+            <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+            <span class="progress-label" id="progress-label">0%</span>
+            <button class="btn btn-stop" id="btn-stop">&#x25A0; Stop</button>
           </div>
-          <div class="vp-header-row vp-header-row--actions">
-            <span class="vp-actions">
-              <button class="icon-btn" id="btn-reset-cam" data-tip="Reset camera (R)">
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 8a6 6 0 0111.2-2.8M14 8a6 6 0 01-11.2 2.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M13 2v3h-3M3 14v-3h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </button>
-              <button class="icon-btn" id="btn-labels" data-tip="Toggle 3D labels"><span style="font-size:9px;font-weight:700">LBL</span></button>
-              <button class="icon-btn" id="btn-beam" data-tip="Toggle beam geometry"><span style="font-size:11px;font-weight:600">BEAM</span></button>
-              <button class="icon-btn" id="btn-fullscreen" data-tip="Fullscreen (F)">
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 5V2h3M9 2h3v3M12 9v3H9M5 12H2V9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-              </button>
-            </span>
+          <span style="flex:1"></span>
+          <span class="hud-rot hidden" id="hud-rot">&theta;: 0&deg; &phi;: 0&deg;</span>
+          <div class="vp-mode-group" id="vp-mode-group">
+            <button class="vp-mode-btn active" data-mode="3d" data-tip="Default mesh view">3D</button>
+            <button class="vp-mode-btn" data-mode="heatmap" data-tip="Color faces by penetration">Heat</button>
+            <button class="vp-mode-btn" data-mode="compare" data-tip="Ghost overlay compare">Cmp</button>
           </div>
+          <span class="vp-divider"></span>
+          <span class="vp-actions">
+            <button class="icon-btn" id="btn-labels" data-tip="Toggle 3D labels">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h7l5 5-5 5H2V3z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><circle cx="5" cy="8" r="1.2" fill="currentColor"/></svg>
+            </button>
+            <button class="icon-btn" id="btn-beam" data-tip="Toggle beam geometry">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="1.5" fill="currentColor"/><path d="M8 3v2.5M8 10.5V13M3 8h2.5m5 0H13" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            </button>
+            <button class="icon-btn" id="btn-reset-cam" data-tip="Reset camera (R)">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 8a6 6 0 0111.2-2.8M14 8a6 6 0 01-11.2 2.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M13 2v3h-3M3 14v-3h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="icon-btn" id="btn-fullscreen" data-tip="Fullscreen (F)">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 5V2h3M9 2h3v3M12 9v3H9M5 12H2V9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            </button>
+          </span>
         </div>
 
         <!-- 3D Viewport (60%) -->
@@ -253,15 +258,10 @@
             <div class="spinner"></div>
             <span>Processing mesh...</span>
           </div>
-          <!-- Camera reset floating button -->
-          <button class="btn-reset-float hidden" id="btn-reset-float" data-tip="Reset camera view">
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 8a6 6 0 0111.2-2.8M14 8a6 6 0 01-11.2 2.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M13 2v3h-3M3 14v-3h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>
-
           <!-- Idle prompt -->
           <div id="idle-prompt">
-            <div class="ip-icon icon--xl">
-              <svg viewBox="0 0 32 32" fill="none"><path d="M16 4v18M8 14l8-8 8 8M4 24v4h24v-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <div class="ip-icon">
+              <svg viewBox="0 0 32 32" width="32" height="32" fill="none"><path d="M16 4v18M8 14l8-8 8 8M4 24v4h24v-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </div>
             <div class="ip-text">Drop your mesh here</div>
             <div class="ip-formats">STL (binary + ASCII) &middot; OBJ &middot; Max 200 MB</div>

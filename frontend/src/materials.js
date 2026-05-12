@@ -1,5 +1,5 @@
 // Materials — material picker, filter picker, beam energy
-import { S, $, qs, qsa } from './state.js';
+import { S, $, qs, qsa, invalidateResults } from './state.js';
 import { CalcBeamParams, GetMaterials, GetFilters, GetScannerPresets } from '../wailsjs/go/main/App';
 
 let _matFilter = 'all', _matSearch = '';
@@ -30,6 +30,7 @@ export function selectMaterial(id) {
   const mat = S.mats.find(m => m.id === id);
   if (subtitleEl && mat) subtitleEl.textContent = '— ' + mat.name;
   recalcBeam();
+  invalidateResults();
 }
 
 export function setMatFilter(cat) { _matFilter = cat; renderMatGrid(); }
@@ -67,18 +68,19 @@ export function selectFilter(id) {
   const f = S.filters.find(f => f.id === id);
   $('acc-filter-val').textContent = f ? f.name : 'None';
   recalcBeam();
+  invalidateResults();
 }
 
 export function setupSliders() {
   const eSl = $('sl-energy');
-  eSl.addEventListener('input', () => { S.energy = parseFloat(eSl.value); recalcBeam(); });
+  eSl.addEventListener('input', () => { S.energy = parseFloat(eSl.value); recalcBeam(); invalidateResults(); });
   [30, 50, 76, 100, 150, 200, 300].forEach(v => {
     const btn = document.createElement('button');
     btn.textContent = v; btn.addEventListener('click', () => { eSl.value = v; S.energy = v; recalcBeam(); });
     $('presets-energy').appendChild(btn);
   });
   const tSl = $('sl-tmin');
-  tSl.addEventListener('input', () => { S.tPct = parseFloat(tSl.value); recalcBeam(); });
+  tSl.addEventListener('input', () => { S.tPct = parseFloat(tSl.value); recalcBeam(); invalidateResults(); });
   [0.01, 0.05, 0.10, 0.20, 0.50, 1.0, 2.0].forEach(v => {
     const btn = document.createElement('button');
     btn.textContent = v.toFixed(2); btn.addEventListener('click', () => { tSl.value = v; S.tPct = v; recalcBeam(); });
@@ -107,6 +109,7 @@ export function setupSliders() {
         $('disp-raygrid-hint').textContent = val + '×' + val + ' coarse / ' + fineVal + '×' + fineVal + ' fine';
       }
       updateGridInfo(val);
+      invalidateResults();
     });
   }
 
@@ -118,11 +121,22 @@ export function setupSliders() {
       S.searchRange = val;
       $('disp-searchrange').textContent = val + '°';
       try { localStorage.setItem('penopt-search-range', String(val)); } catch (_) {}
+      invalidateResults();
     });
     // Sync display in case S.searchRange was restored from localStorage before slider
     $('disp-searchrange').textContent = S.searchRange + '°';
     srSl.value = S.searchRange;
   }
+}
+
+function setupScannerInputListeners() {
+  // Individual scanner geometry inputs — change events only fire on user edits,
+  // not on programmatic value changes (e.g. preset selection).
+  ['cfg-sdd', 'cfg-sod', 'cfg-detw', 'cfg-deth', 'cfg-px', 'cfg-py'].forEach(function(id) {
+    var el = $(id);
+    if (!el) return;
+    el.addEventListener('change', invalidateResults);
+  });
 }
 
 export function setupScannerPresets() {
@@ -146,5 +160,8 @@ export function setupScannerPresets() {
         accVal.textContent = p.sdd + '/' + p.sod;
       }
     }
+    // Preset selection changes geometry — invalidate results
+    invalidateResults();
   });
+  setupScannerInputListeners();
 }

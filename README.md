@@ -1,39 +1,24 @@
-# PenOpt - CT Scan Orientation Optimizer
+# PenOpt — CT Scan Orientation Optimizer
 
-A desktop tool that finds the optimal orientation for CT scanning a given part. Load a mesh (STL/OBJ), simulate X-ray projections with BVH-accelerated ray casting, and search over orientations to minimize penetration, energy requirements, and beam-hardening artifacts.
+A desktop application that finds the optimal orientation for industrial X-ray CT scanning. Load a mesh (STL/OBJ), configure beam energy and scanner geometry, and search over tilt/rotation angles to minimize penetration, energy requirements, and cone-beam artifacts.
 
-Built with [Wails v2](https://wails.io/) (Go backend, Three.js/WebGL frontend). The optimization extends the coarse-to-fine grid search from **Ito et al. 2020**.[^1] with additional objectives for Tuy completeness and beam-hardening approximation.
+<!-- Screenshot: add `./docs/screenshot.png` and remove this comment -->
+<!-- ![PenOpt UI](./docs/screenshot.png) -->
 
-## Features
+[![Go 1.23+](https://img.shields.io/badge/Go-1.23+-00ADD8?style=flat-square&logo=go)](https://go.dev/dl/)
+[![Wails v2](https://img.shields.io/badge/Wails-v2-2.12-6e48d9?style=flat-square&logo=wails)](https://wails.io/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 
-- Simulates X-ray paths through arbitrary triangle meshes at interactive speeds using **BVH-accelerated ray casting**.
-- **Multi-objective search** — five objectives from the literature and extensions (generalized-mean penetration f_mtl, max path length f_energy, projection uniformity f_hdn, Tuy completeness f_tuy, and beam-hardening approximation f_bh) combined into a weighted score.
-- **Coarse-to-fine grid search:** 15° initial grid over (θ, φ), top-3 refinement at 1° (configurable in code; future UI control planned).
-- **Search range control** — user-adjustable angular range for optimization (default ±45°, range ±30° to ±75°).
-- NIST XCOM attenuation coefficients for common materials (Al, Ti, Fe, Cu, W, PMMA…), with energy-dependent lookup.
-- CT scanner presets for industrial and medical systems (Nikon, GE, Zeiss, Siemens, Philips, dental CBCT) plus beam filter presets (Cu, Al, Sn, Ti) with effective energy computation.
-- **IntelliScan:** tangent-angle computation for cone-beam geometry (adaptive projection allocation planned).
-- **3D viewport** with free rotation and per-face penetration heatmaps.
-- Contour plots and penetration roses to visualize the objective landscape.
-- Estimates required kV from max path length and material — removes the guesswork from scan setup.
-- JSON and PNG export with summary overlay.
+## What This Does
 
-## Requirements
+PenOpt solves a concrete problem in industrial CT scanning: **which orientation should you scan a part in?** Given a 3D mesh, it casts X-rays through the geometry, evaluates five image-quality objectives over hundreds of orientations, and returns the optimal tilt (θ) and rotation (φ) angles. It also generates IntelliScan projection schedules (Butzhammer 2026) and tells you what kV you'll need.
 
-- [Go](https://go.dev/dl/) 1.23+
-- [Node.js](https://nodejs.org/) 18+ (for frontend build)
-- [Wails v2](https://wails.io/docs/gettingstarted/installation) CLI
+Built with [Wails v2](https://wails.io/) — Go backend with BVH-accelerated ray casting, Three.js/WebGL frontend.
 
-On Linux, you'll also need the Wails system dependencies (`libgtk-3-dev`, `libwebkit2gtk-4.0-dev`, etc.). See the [Wails Linux setup guide](https://wails.io/docs/gettingstarted/installation#platform-specific-dependencies).
-
-## Development
+## Quick Start
 
 ```bash
-# Clone and enter the project directory
-git clone <repo-url> penopt
-cd penopt
-
-# Install frontend deps
+# Install dependencies
 cd frontend && npm install && cd ..
 
 # Run with live hot-reload
@@ -43,89 +28,172 @@ wails dev
 wails build
 ```
 
-`wails dev` starts a Vite dev server for the frontend and connects it to the Go backend. Open http://localhost:34115 for browser-based development with full Go method access.
+Open http://localhost:34115 after `wails dev` starts. On Linux, install Wails system dependencies first (`libgtk-3-dev`, `libwebkit2gtk-4.0-dev`).
+
+## Features
+
+### At a Glance
+
+| Capability | Details |
+|---|---|
+| **Ray casting** | BVH-accelerated (median-split BVH, Möller-Trumbore), parallel goroutines |
+| **Search** | Coarse-to-fine grid: 15° → 1° refinement, global normalization |
+| **Objectives** | f_mtl (generalized-mean penetration), f_energy (max path), f_hdn (projection range) |
+| **Scoring** | Minimax or weighted combination, 3 weight presets |
+| **Tuy-Smith tracking** | Completeness fraction per orientation, warning < 90% |
+| **Materials** | 40+ NIST XCOM entries with energy-dependent μ/ρ, log-log interpolation |
+| **Beam filters** | Cu, Al, Sn, Ti presets with polyenergetic effective energy (120-point spectrum) |
+| **Scanner presets** | 13 industrial/medical presets (Nikon, GE, Zeiss, Siemens, Philips, dental CBCT) |
+| **IntelliScan** | Tangent-ray projection selection (Butzhammer 2026), scan time vs. 360° |
+| **3D viewport** | Three.js, smooth animated rotation, per-face heatmap, beam geometry viz |
+| **Analysis plots** | Score contour (bilinear-interpolated heatmap), penetration rose (polar) |
+| **Export** | JSON (full result set) and PNG (viewport + summary overlay) |
+| **Ray sampling** | Adjustable grid: 4×4 (fast preview) → 32×32 (high accuracy) |
+| **Search range** | ±30° → ±75° with boundary-edge warnings |
+
+### In Depth
+
+- **Materials & Physics** — NIST XCOM attenuation database for 40+ materials, polyenergetic effective energy using 120-point spectrum integration, pre-filter presets with flux ratio and HVL-Cu computation, kV recommendation with qualitative guidance (Low / Medium / High)
+- **Scanner Configuration** — 13 industrial and medical CT presets, full manual control of SDD, SOD, detector dimensions, and pixel count
+- **Visualization** — Per-face penetration heatmap, score contour plot with search boundary overlay, penetration rose (optimal vs. worst orientation), optional 3D cone-beam diagram, compare mode with ghost overlay
+- **IntelliScan** — Computes unique tangent-ray projection angles from rotated face normals. Reports reduction vs. full 360° coverage with scan time estimate. Copy angles or export as JSON.
+- **UI** — Dark theme (Inter + JetBrains Mono), material filter tabs with live search, real-time progress ring with orientation HUD, keyboard shortcuts, session persistence across restarts
 
 ## Usage
 
-1. **Load a mesh.** Drag-and-drop or use the file dialog (STL/OBJ). The mesh is centered at origin and a BVH is built on load.
-2. **Configure the scan.** Pick a scanner preset or set geometry manually (SDD, SOD, detector size, pixels). Select a material and optional beam filter.
-3. **Set weights.** Adjust the balance between the five objectives using the preset buttons (Quality, Balanced, Energy) or custom weights (future UI control planned). Current presets:
-   - Quality: w_mtl=0.5, w_energy=0.2, w_hdn=0.2, w_tuy=0.05, w_bh=0.05
-   - Balanced: w_mtl=0.3, w_energy=0.3, w_hdn=0.2, w_tuy=0.1, w_bh=0.1
-   - Energy: w_mtl=0.2, w_energy=0.5, w_hdn=0.2, w_tuy=0.05, w_bh=0.05
-4. **Set search range.** Use the slider in the Scanner accordion to adjust the angular range (default ±45°).
-5. **Run optimization.** The search runs asynchronously. Progress is shown in the viewport overlay and sidebar.
-6. **Review results.** The best orientation (θ, φ) is shown with its scores. Switch between 3D, contour, and rose views. Toggle heatmap to see per-face penetration at any orientation.
-7. **Export.** Save results as JSON or take a PNG screenshot with summary overlay.
+### 1. Load a mesh
+Drag-and-drop or click the drop zone to open the native file dialog. Supports STL (binary and ASCII) and OBJ. The mesh is centered at origin and a BVH is built on load. Watertight status and boundary edge count are shown.
 
-## Algorithm
+> **Non-watertight meshes**: Penetration values will be underestimated. A warning banner appears when open edges are detected.
 
-At each candidate orientation (θ, φ), the tool:
+### 2. Configure material
+Pick a material from the NIST XCOM database using the category tabs (All / Metallic / Non-Metallic) or the search field. Set beam energy (keV) and minimum transmission (Tmin) — the effective energy after filtering is computed live.
 
-1. Rotates the mesh by θ around X and φ around Y.
-2. Casts a grid of rays from the X-ray source through the BVH, recording the path length through material for each ray.
-3. Computes five objectives:
-   - **f_mtl:** generalized mean of path lengths (m=3, cube-root mean). Penalizes orientations with long penetration paths.
-   - **f_energy:** maximum path length across all rays. Determines the X-ray energy needed.
-   - **f_hdn:** range of per-projection maximum path lengths. Penalizes orientations where different projections see very different max thicknesses (drives beam-hardening variation).
-   - **f_tuy:** Tuy-Smith completeness (fraction of mesh faces satisfying Tuy's condition for exact cone-beam reconstruction). Higher is better.
-   - **f_bh:** beam-hardening approximation (currently a placeholder; future implementation will use polyenergetic spectrum).
-4. Combines them into a weighted score.
+### 3. Configure scan
+Choose a scanner preset or set SDD, SOD, detector dimensions, and pixels manually. Optionally add a beam pre-filter and see effective energy shift, HVL-Cu, and flux ratio.
 
-The search starts with a coarse 15° grid over θ ∈ [-range°, range°] and φ ∈ [-range°, range°] (where range° is the user-set search range, default 45°). The top 3 are refined at 1° resolution within ±5° neighborhoods. The IntelliScan variant computes tangent angles for cone-beam geometry (future work will adapt projection allocation during coarse search based on orientation variance).
+### 4. Set optimization parameters
+- **Quality / Balanced / Energy presets** — choose how to combine objectives (minimax or weighted)
+- **Ray Sampling slider** — lower values (4×4) for fast preview, higher (32×32) for accurate results
+- **Search Range slider** — narrow (±30°) for focused search, wide (±75°) for comprehensive coverage
 
-## Scanner Presets
+### 5. Run optimization
+Click **Optimize** in the sidebar or viewport header. The search runs asynchronously — progress is shown as a ring overlay, percentage, and live orientation label (θ, φ). Stop the search at any time.
 
-| Preset | SDD (mm) | SOD (mm) | Detector (mm) | Pixels |
-|--------|----------|----------|---------------|--------|
-| Custom | 1000 | 700 | 400×400 | 1024 |
-| Nikon XT H 225 | 800 | 500 | 400×400 | 1024 |
-| Nikon XT H 320 | 1200 | 800 | 400×400 | 1024 |
-| GE Phoenix v\|tome\|x S240 | 600 | 400 | 300×300 | 1024 |
-| GE Phoenix v\|tome\|x M300 | 1000 | 700 | 400×400 | 2048 |
-| Zeiss METROTOM 800 | 700 | 450 | 300×300 | 1024 |
-| Zeiss METROTOM 1500 | 1200 | 800 | 400×400 | 2048 |
-| Nikon VOXLS 20 | 500 | 300 | 200×200 | 1024 |
-| Nikon VOXLS 30 | 700 | 450 | 300×300 | 1024 |
-| Siemens Somatom Go.Up | 1040 | 595 | 500×500 | 736 |
-| GE LightSpeed VCT | 949 | 541 | 400×400 | 888 |
-| Philips Brilliance 64 | 1040 | 570 | 500×500 | 672 |
-| Dental CBCT (small) | 300 | 200 | 100×80 | 640 |
+### 6. Review results
+- Optimal orientation (θ, φ) with per-metric comparison to worst orientation
+- kV recommendation with qualitative guidance
+- Tuy completeness warning if below 90%
+- Boundary warning if optimum is near search range edge
+- IntelliScan angles card with copy/export actions
+- Analysis plots: score contour and penetration rose
+
+### 7. Export
+Save results as JSON for programmatic use, or as a PNG screenshot with summary overlay.
+
+## Objective Functions
+
+| Function | Description | Target |
+|----------|-------------|--------|
+| **f_mtl** | Generalized mean of X-ray path lengths (m=3, cube-root). Penalizes orientations with long penetration paths. | Minimize |
+| **f_energy** | Maximum path length across all rays. Determines the X-ray tube voltage needed. | Minimize |
+| **f_hdn** | Range of max path lengths across projections. Low values mean more isotropic ray coverage. | Minimize |
+| **f_tuy** | Fraction of faces with at least one tangent ray (Tuy-Smith completeness). Warning shown below 90%. | Track (warning) |
+
+## How It Works
+
+PenOpt searches over two angles — tilt θ (rotation around X) and rotation φ (rotation around Y) — evaluating ray casting results at each candidate orientation:
+
+1. **Rotate** the mesh by θ and φ.
+2. **Cast rays** from the X-ray source through a ray grid at N projection angles, traversing the BVH to find all intersections and measure path length through solid material.
+3. **Evaluate objectives** from the path length array.
+4. **Coarse phase**: 15° grid over the configured range (±45° default).
+5. **Refinement phase**: top-3 coarse candidates refined at 1° in ±5° neighborhoods.
+6. **Global normalization** across all coarse + fine results (avoids batch-local bias).
+7. **Score**: minimax or weighted combination across objectives.
+8. **IntelliScan**: tangent angles from rotated face normals (Butzhammer 2026).
+
+## Requirements
+
+- [Go](https://go.dev/dl/) 1.23+
+- [Node.js](https://nodejs.org/) 18+
+- [Wails v2](https://wails.io/docs/gettingstarted/installation) CLI
+
+On Linux, install Wails system dependencies (`libgtk-3-dev`, `libwebkit2gtk-4.0-dev`) per the [Linux setup guide](https://wails.io/docs/gettingstarted/installation#platform-specific-dependencies).
 
 ## Project Structure
 
 ```
 penopt/
-├── main.go                # Wails app entry point
-├── app.go                 # Thin composition layer for Wails bindings
-├── CONTEXT.md             # Domain glossary (architecture decisions & language)
+├── main.go                    # Wails v2 entry point
+├── app.go                     # Thin composition layer — Go packages → frontend bindings
+├── go.mod / go.sum            # Go 1.23, Wails v2.12
+├── wails.json                 # Wails configuration
 ├── frontend/
+│   ├── index.html             # Single-page app shell
+│   ├── package.json           # Vite 5, Three.js r170
 │   └── src/
-│       ├── main.js        # Bootstrap & keyboard shortcuts
-│       ├── state.js       # Shared state object & DOM helpers
-│       ├── scene.js       # Three.js scene, mesh rendering, heatmap, beam viz
-│       ├── filehandler.js # File upload, drag-drop, mesh loading
-│       ├── optimizer.js   # Search lifecycle, results, IntelliScan
-│       ├── materials.js   # Material/filter picker, beam energy
-│       ├── export.js      # JSON / PNG export
-│       ├── plots.js       # Contour & rose canvas plots
-│       └── style.css      # Design system (dark theme)
+│       ├── main.js            # Bootstrap, keyboard shortcuts, event wiring
+│       ├── state.js           # Shared state, weight presets, DOM helpers
+│       ├── scene.js           # Three.js scene, mesh, heatmap, beam viz
+│       ├── filehandler.js     # File upload, drag-drop, mesh loading
+│       ├── optimizer.js       # Search lifecycle, progress, results rendering
+│       ├── materials.js       # Material/filter picker, beam energy
+│       ├── export.js          # JSON and PNG export
+│       ├── plots.js           # Contour plot and penetration rose
+│       └── style.css          # Dark-theme design system (CSS variables)
 ├── internal/
-│   ├── app/               # Focused adapters: MeshLoader, Optimizer, PhysicsAPI, ScannerAPI
-│   ├── bvh/               # Bounding volume hierarchy construction & traversal
-│   ├── mesh/              # STL/OBJ parsers, watertight check, Vec3 type
-│   ├── objectives/        # f_mtl, f_energy, f_hdn, f_tuy, f_bh objective functions
-│   ├── physics/           # NIST XCOM materials, beam filters, effective energy
-│   ├── raycaster/         # BVH-accelerated ray casting & transmission lengths
-│   ├── search/            # Coarse→fine grid search, IntelliScan
-│   └── vec/               # Shared 3D vector math (Dot, Cross, Sub, Normalize, Rotate)
-└── build/                 # Platform-specific build assets & icons
+│   ├── app/                   # Wails adapters: MeshLoader, Optimizer, PhysicsAPI, ScannerAPI
+│   ├── bvh/                   # Bounding volume hierarchy (median-split, Möller-Trumbore)
+│   ├── mesh/                  # Mesh type, STL/OBJ parsers, watertight validation
+│   ├── objectives/            # f_mtl, f_energy, f_hdn, normalization, CombinedScore
+│   ├── physics/               # NIST XCOM database, Beer-Lambert, filter effects
+│   ├── raycaster/             # BVH ray casting, ray grid, transmission lengths, heatmap
+│   ├── search/                # Coarse→fine grid, global normalization
+│   │   ├── search.go          # Search orchestration
+│   │   ├── intelliscan.go     # Tangent-ray angles (Butzhammer 2026)
+│   │   └── tuy.go             # Tuy-Smith completeness
+│   └── vec/                   # 3D vector math
+└── build/                     # Icons, installer config
 ```
+
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Ctrl+O` | Open file dialog |
+| `Ctrl+Enter` | Start optimization |
+| `Esc` | Dismiss error / help overlay |
+| `1` | 3D view mode |
+| `2` | Heatmap view mode |
+| `3` | Compare view mode |
+| `R` | Reset camera |
+| `F` | Toggle fullscreen |
+
+## References
+
+- **Ito, T. et al. (2020)** — "Optimization of X-ray CT scanning orientation for additive manufactured parts using ray casting." *Precision Engineering*, 64, 232–240.
+- **Butzhammer, L. et al. (2026)** — Tangent-ray selection for cone-beam CT. *Internal research reference.*
+- **Lifton, J. & Poon, E. (2023)** — IntelliScan adaptive projection allocation.
+- **NIST XCOM** — Photon Cross Sections Database.
+
+## Roadmap
+
+- [ ] **f_bh implementation** — polyenergetic beam-hardening objective replacing the current placeholder
+- [ ] **NSGA-II multi-objective optimization** — Pareto-front exploration instead of scalarized weights
+- [ ] **Adaptive ray grid** — projection count dynamically allocated based on orientation variance
+- [ ] **Results history** — persist and compare multiple optimization runs
+
+## Contributing
+
+Contributions are welcome. Please open an issue to discuss changes before submitting PRs.
+
+## Acknowledgments
+
+- Möller-Trumbore algorithm for ray-triangle intersection
+- NIST XCOM for material attenuation data
+- Wails team for the Go + web frontend integration framework
 
 ## License
 
 MIT © [Rami Abu-Hamad](mailto:rami@abu-hamad.de)
-
----
-
-[^1]: Ito, T. et al. (2020). "Optimization of X-ray CT scanning orientation for additive manufactured parts using ray casting." *Precision Engineering*, 64, 232–240.

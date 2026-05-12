@@ -24,10 +24,14 @@ export function initScene() {
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(w, h);
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.0;
   c.appendChild(renderer.domElement);
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true; controls.dampingFactor = 0.08; controls.target.set(0, 0, 0);
-  scene.add(new THREE.AmbientLight(0x404060, 0.6));
+  controls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN };
+  controls.touches = { ONE: THREE.TOUCH.ROTATE_PAN, TWO: THREE.TOUCH.DOLLY_PAN };
+  scene.add(new THREE.AmbientLight(0x404060, 1.0));
   scene.add(new THREE.HemisphereLight(0x6088cc, 0x302040, 0.4));
   const d1 = new THREE.DirectionalLight(0xffffff, 0.9); d1.position.set(200, 300, 400); scene.add(d1);
   const d2 = new THREE.DirectionalLight(0x6688cc, 0.35); d2.position.set(-200, -100, -300); scene.add(d2);
@@ -244,27 +248,7 @@ export function switchViewMode(mode) {
   if (mode === 'compare') enterCompareMode();
 }
 
-export function switchLayoutMode(mode) {
-  S.layoutMode = mode;
-  qsa('.vp-layout-btn').forEach(b => b.classList.toggle('active', b.dataset.layout === mode));
-  const sb = $('sidebar'), res = $('results-panel');
-  if (mode === 'viewport') {
-    sb.style.display = 'none';
-    res.style.display = 'none';
-  } else if (mode === 'results') {
-    sb.style.display = 'none';
-    res.style.display = '';
-    res.classList.remove('hidden');
-  } else if (mode === 'all' || mode === 'default') {
-    sb.style.display = '';
-    res.style.display = '';
-    if (S.result) res.classList.remove('hidden');
-  } else {
-    sb.style.display = '';
-    res.style.display = '';
-    if (S.result) res.classList.remove('hidden');
-  }
-}
+
 
 // ── Beam Visualization ──
 export function createBeamVisualization() {

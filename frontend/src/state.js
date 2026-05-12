@@ -21,9 +21,9 @@ export const S = {
   materialID: 'al', filterID: 'none', energy: 76, tPct: 0.1,
   searching: false, searchCancel: false,
   mats: [], filters: [], presets: [],
-  viewMode: '3d', layoutMode: 'default',
+  viewMode: '3d',
   labelsVisible: false, beamVisible: false, compareMode: false,
-  result: null, weightPreset: 0, method: 'minimax',
+  result: null, resultsStale: false, weightPreset: 0, method: 'minimax',
   resultsCollapsed: false,
   facePenetrations: null,
   facePenMin: 0, facePenMax: 0,
@@ -43,6 +43,115 @@ export function formatTime(ms) {
   const m = Math.floor(sec / 60);
   const s = sec % 60;
   return m + 'm ' + s + 's';
+}
+
+// ── Themed confirmation dialog (replaces window.confirm) ──
+export function showConfirm(message) {
+  return new Promise(function(resolve) {
+    var overlay = $('confirm-overlay');
+    var textEl = $('confirm-text');
+    var cancelBtn = $('confirm-cancel');
+    var okBtn = $('confirm-ok');
+
+    textEl.textContent = message;
+
+    function cleanup(result) {
+      overlay.classList.add('hidden');
+      cancelBtn.removeEventListener('click', onCancel);
+      okBtn.removeEventListener('click', onOk);
+      document.removeEventListener('keydown', onKey);
+      overlay.removeEventListener('click', onOverlayClick);
+      resolve(result);
+    }
+
+    function onCancel() { cleanup(false); }
+    function onOk() { cleanup(true); }
+
+    function onKey(e) {
+      if (e.key === 'Escape') { e.preventDefault(); cleanup(false); return; }
+      if (e.key === 'Tab') {
+        if (e.shiftKey && document.activeElement === cancelBtn) {
+          e.preventDefault();
+          okBtn.focus();
+        } else if (!e.shiftKey && document.activeElement === okBtn) {
+          e.preventDefault();
+          cancelBtn.focus();
+        }
+      }
+    }
+
+    function onOverlayClick(e) {
+      if (e.target === overlay) cleanup(false);
+    }
+
+    cancelBtn.addEventListener('click', onCancel);
+    okBtn.addEventListener('click', onOk);
+    document.addEventListener('keydown', onKey);
+    overlay.addEventListener('click', onOverlayClick);
+
+    overlay.classList.remove('hidden');
+    cancelBtn.focus();
+  });
+}
+
+// ── Stale results state machine ──
+// When any parameter that invalidates the current results changes,
+// the system marks results as stale and shows a clear visual indicator
+// telling the user they need to rerun the optimization.
+
+export function invalidateResults() {
+  if (!S.result) return; // No results to invalidate
+  S.resultsStale = true;
+
+  // Status dot → amber
+  const osDot = $('os-dot');
+  if (osDot) osDot.className = 'os-dot os-dot--stale';
+  const osText = $('os-text');
+  if (osText) osText.textContent = 'Results outdated — rerun to update';
+  setStatus('Results outdated — click Optimize to rerun');
+
+  // Stale banner at the top of the results panel
+  const resultsContent = $('results-content');
+  if (resultsContent) {
+    let banner = document.getElementById('stale-banner');
+    if (!banner) {
+      banner = document.createElement('div');
+      banner.id = 'stale-banner';
+      banner.className = 'stale-banner';
+      banner.innerHTML = '<span class="stale-icon">\u26A0</span> <span>Parameters changed \u2014 <strong>results are outdated</strong>. Click <strong>Optimize</strong> to rerun with current settings.</span>';
+      resultsContent.insertBefore(banner, resultsContent.firstChild);
+    } else {
+      banner.classList.remove('hidden');
+    }
+  }
+
+  // Stale visual class on the results panel container
+  const resultsPanel = $('results-panel');
+  if (resultsPanel) resultsPanel.classList.add('results-stale');
+
+  // Change Optimize buttons to "Re-optimize" with orangish fill
+  const main = $('btn-optimize');
+  const side = $('btn-optimize-sidebar');
+  if (main && !main.disabled) { main.classList.add('btn-stale'); main.innerHTML = '\u25B6 Re-optimize'; }
+  if (side && !side.disabled) { side.classList.add('btn-stale'); side.innerHTML = '\u25B6 Re-optimize'; }
+}
+
+export function clearStaleResults() {
+  S.resultsStale = false;
+
+  // Hide stale banner
+  const banner = document.getElementById('stale-banner');
+  if (banner) banner.classList.add('hidden');
+
+  // Remove stale class from results panel
+  const resultsPanel = $('results-panel');
+  if (resultsPanel) resultsPanel.classList.remove('results-stale');
+
+  // Restore Optimize buttons to default state
+  const main = $('btn-optimize');
+  const side = $('btn-optimize-sidebar');
+  if (main) { main.classList.remove('btn-stale'); main.innerHTML = '\u25B6 <span>Optimize</span>'; }
+  if (side) { side.classList.remove('btn-stale'); side.innerHTML = '\u25B6 <span>Optimize</span>'; }
 }
 
 // ── Optimize button state (syncs viewport header + sidebar) ──

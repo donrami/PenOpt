@@ -1,5 +1,5 @@
 // Optimizer — search lifecycle, progress, results, IntelliScan, heatmap loading
-import { S, $, qsa, DEG, WEIGHT_PRESETS, showError, setStatus } from './state.js';
+import { S, $, qsa, DEG, WEIGHT_PRESETS, showError, setStatus, invalidateResults, clearStaleResults } from './state.js';
 import { applyHeatmap, animateRotation } from './scene.js';
 import { recalcBeam } from './materials.js';
 import { RunOptimization, ComputeFaceHeatmap, CalcEnergyRecommendation } from '../wailsjs/go/main/App';
@@ -12,6 +12,8 @@ const runtime = window.runtime;
 export function runOptimization() {
   if (!S.meshLoaded || S.searching) return;
   S.searching = true; S.searchCancel = false;
+  // Clear stale state — fresh optimization is starting
+  clearStaleResults();
 
   // Show search UI
   $('btn-optimize').disabled = true; $('btn-optimize').innerHTML = '\u25B6 Searching...';
@@ -60,6 +62,8 @@ export function runOptimization() {
     try {
       const result = JSON.parse(data.result);
       S.result = result;
+      // Fresh results — clear stale state
+      clearStaleResults();
       showResults(result);
       renderIntelliScan(result);
       // Redraw rose with IntelliScan ticks
@@ -70,7 +74,7 @@ export function runOptimization() {
       }
       $('progress-ring').classList.add('hidden');
       loadHeatmap(result);
-      try { localStorage.setItem('penopt-last-result', JSON.stringify({ bestOrientation: result.bestOrientation, worstOrientation: result.worstOrientation })); } catch (_) {}
+
     } catch (err) {
       showError('Result parse error: ' + err.message);
       $('progress-ring').classList.add('hidden');
@@ -279,11 +283,42 @@ async function loadHeatmap(result) {
 export function setupCardAccordion() {
   qsa('.card.accordion').forEach(card => {
     const head = card.querySelector('.card-head');
-    if (!head) return;
+    const body = card.querySelector('.card-body');
+    if (!head || !body) return;
+
+    // After expand transition completes, remove inline max-height
+    // so content can grow freely (nested accordions, dynamic content).
+    body.addEventListener('transitionend', function onEnd(e) {
+      if (e.propertyName === 'max-height' && card.classList.contains('open')) {
+        body.style.maxHeight = '';
+      }
+    });
+
     head.addEventListener('click', () => {
+      const wasOpen = card.classList.contains('open');
       card.classList.toggle('open');
       const chev = head.querySelector('.chevron');
       if (chev) chev.classList.toggle('open');
+
+      if (wasOpen) {
+        // Close: clear any lingering inline max-height, measure the full
+        // rendered height (incl. padding via .open CSS), then animate to 0
+        body.style.maxHeight = '';
+        var closeH = body.scrollHeight;
+        body.style.maxHeight = closeH + 'px';
+        // Force reflow so the browser registers the starting point
+        void body.offsetHeight;
+        body.style.maxHeight = '0px';
+      } else {
+        // Open: ensure no constraint, measure content height (padding is now
+        // restored via .open CSS), animate from 0 to full height
+        body.style.maxHeight = '';
+        var h = body.scrollHeight;
+        body.style.maxHeight = '0px';
+        // Force reflow so the browser registers the starting point
+        void body.offsetHeight;
+        body.style.maxHeight = h + 'px';
+      }
     });
   });
 }
@@ -303,6 +338,7 @@ export function setupTradeoff() {
       qsa('.tradeoff-stop').forEach(e => e.classList.remove('active'));
       el.classList.add('active');
       S.weightPreset = parseInt(el.dataset.w);
+      invalidateResults();
     });
   });
   qsa('.method-btn').forEach(el => {
@@ -310,6 +346,7 @@ export function setupTradeoff() {
       qsa('.method-btn').forEach(e => e.classList.remove('active'));
       el.classList.add('active');
       S.method = el.dataset.method;
+      invalidateResults();
     });
   });
   $('btn-update-search').addEventListener('click', () => {
