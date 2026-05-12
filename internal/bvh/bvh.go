@@ -82,10 +82,13 @@ func (bvh *BVH) buildRange(start, end int) *Node {
 	}
 
 	// Sort triangles by centroid along the chosen axis
+	// Pre-compute centroids once to avoid recomputing per comparison
+	centroids := make([]float64, count)
+	for i := 0; i < count; i++ {
+		centroids[i] = centroid(bvh.Triangles[start+i], axis)
+	}
 	sort.Slice(bvh.Triangles[start:end], func(i, j int) bool {
-		ci := centroid(bvh.Triangles[start+i], axis)
-		cj := centroid(bvh.Triangles[start+j], axis)
-		return ci < cj
+		return centroids[i] < centroids[j]
 	})
 
 	// Split at midpoint
@@ -232,8 +235,6 @@ func RayTriangleIntersect(origin, dir mesh.Vec3, tri mesh.Triangle) (hit bool, t
 	return true, t
 }
 
-// Vector helpers removed — use vec.Dot, vec.Cross, etc. from penopt/internal/vec
-
 // ── BVH traversal ──
 
 // Intersect finds the nearest intersection of a ray with the BVH.
@@ -284,15 +285,9 @@ func (bvh *BVH) IntersectAll(origin, dir mesh.Vec3) (hits []float64, triIndices 
 	triIndices = make([]int, 0, 64)
 	_intersectAllNode(bvh.Root, origin, dir, &hits, &triIndices, bvh.Triangles)
 
-	// Sort by distance
+	// Sort by distance (callers expect sorted results; triIndices left unsorted — unused)
 	if len(hits) > 1 {
-		// Simple insertion sort for small lists
-		for i := 1; i < len(hits); i++ {
-			for j := i; j > 0 && hits[j] < hits[j-1]; j-- {
-				hits[j], hits[j-1] = hits[j-1], hits[j]
-				triIndices[j], triIndices[j-1] = triIndices[j-1], triIndices[j]
-			}
-		}
+		sort.Float64s(hits)
 	}
 	return
 }

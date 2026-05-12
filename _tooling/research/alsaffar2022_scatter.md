@@ -12,13 +12,44 @@
 
 In CT, scattering causes severe quality degradation (streaks, cupping artifacts) that reduce detectability of low-contrast objects. Monte Carlo simulation is the most accurate approach for scatter estimation, but existing MC estimators are computationally expensive, especially for high-resolution flat-panel CT. This paper proposes a fast and accurate MC photon transport model describing physics in the 1 keV to 1 MeV range with multiple controllable key parameters. Scatter computation for a single projection completes within seconds. Combining fast scatter estimation with filtered backprojection (FBP), scatter correction is performed iteratively. The proposed model achieved 15× acceleration on single-GPU vs. Penelope MCGPU and 202× speed-up on multi-GPU vs. EGSnrc.
 
-## Role in PenOpt (PenOpt: `internal/physics/scatter.go`)
+## Status in PenOpt: **Not Implemented**
 
-### 1. Scatter-to-Primary Ratio Model (`SparseGridSPR`)
+> ⚠️ **NOT IMPLEMENTED — REFERENCE ONLY**
+> PenOpt currently has no scatter awareness. This research note serves as a reference for a planned future feature. The code described below does not exist in the codebase.
 
-PenOpt uses an **analytical scatter-to-primary ratio (SPR)** model inspired by Alsaffar's approach, adapted for the sparse 16×16 ray grid:
+### Current Reality
+
+PenOpt's objective functions do not include any scatter metric. The comment in `internal/objectives/objectives.go` line 4–6 lists scatter among planned objectives:
 
 ```go
+// Additional objectives (beam hardening, scatter, cone-beam, uncertainty)
+// are defined but require per-face or per-projection data not collected
+// by the sparse ray grid — they are available in NSGA-II+AdvancedPhysics mode.
+```
+
+However, no scatter-related code exists in the codebase:
+- No `internal/physics/scatter.go` file
+- No `SparseGridSPR()` or any other scatter function
+- No f_scatter objective
+- No scatter-to-primary ratio computation
+
+### Why Scatter Awareness Matters
+
+Scatter is a major source of CT image quality degradation. For industrial CT of dense objects (metal, ceramic), scatter-to-primary ratios can exceed 5:1 in certain projections, causing:
+- **Cupping artifacts**: Apparent density reduction in the centre of uniform objects
+- **Streak artifacts**: Dark bands between high-density features
+- **Reduced contrast resolution**: Low-contrast features become undetectable
+
+Ignoring scatter means PenOpt's optimal orientation may:
+- Favour orientations with favourable attenuation but **worst-case scatter geometry**
+- Miss the true optimum that balances both penetration and scatter
+
+### Proposed Approach (for when implementation begins)
+
+The core insight from Alsaffar is that **scatter magnitude correlates with mean ray path length through the object** (more material → more Compton scattering → higher SPR). This suggests a geometric proxy approach:
+
+```go
+// Proposed signature:
 func SparseGridSPR(meanThickness float64, energy float64, mat Material) float64
 ```
 
@@ -28,9 +59,7 @@ func SparseGridSPR(meanThickness float64, energy float64, mat Material) float64
 | `energy` | Effective energy (keV) | 30–500 keV |
 | `mat` | Material properties (density, μ) | Al, Fe, Ti, etc. |
 
-The SPR is clamped to [0, 2] to prevent unphysical values.
-
-### 2. Integration with Physics Pipeline
+The SPR would be clamped to [0, 2] to prevent unphysical values, and integrated into the physics pipeline as:
 
 ```
 SparseGridSPR(meanThickness, energy, mat)
@@ -40,17 +69,18 @@ SPR value [0, 2]  →  weighting factor for scatter degradation
 f_scatter objective (higher SPR → worse scatter artifacts)
 ```
 
-### 3. Simplification vs. Full Model
+### Simplification vs. Full Model
 
-| Aspect | Alsaffar et al. (2022) | PenOpt |
+| Aspect | Alsaffar et al. (2022) | Proposed PenOpt Proxy |
 |---|---|---|
 | **Method** | MC photon transport (GPU) | Analytical SPR formula |
 | **Resolution** | Full projection (high-res flat-panel) | 16×16 sparse grid |
 | **Output** | Full scatter distribution map | Single SPR value |
 | **Speed** | Seconds per projection | Microseconds per evaluation |
 | **Accuracy** | High (validated against measurements) | Approximate (geometric proxy) |
-| **Energy range** | 1 keV – 1 MeV | Single effective energy |
 
-## Key Insight Used in PenOpt
+## See Also
 
-The core insight adopted from Alsaffar is that **scatter magnitude correlates with mean ray path length through the object** (more material → more Compton scattering → higher SPR). This allows PenOpt to use mean transmission length as a fast geometric surrogate for scatter severity during optimisation, without running expensive MC simulations for each candidate orientation.
+- Current objective functions (scatter not included): `internal/objectives/objectives.go`
+- Grozmani et al. 2019 measurement uncertainty: [`grozmani2019_uncertainty.md`](./grozmani2019_uncertainty.md)
+- Physical foundation (Beer-Lambert, NIST XCOM): [`nist_xcom.md`](./nist_xcom.md)

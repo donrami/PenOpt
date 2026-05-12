@@ -71,6 +71,7 @@ func RotateY(v mesh.Vec3, angle float64) mesh.Vec3 {
 }
 
 // Min returns the minimum of two ints.
+// Deprecated: use the builtin min() since Go 1.21.
 func Min(a, b int) int {
 	if a < b {
 		return a
@@ -79,6 +80,7 @@ func Min(a, b int) int {
 }
 
 // Max returns the maximum of two ints.
+// Deprecated: use the builtin max() since Go 1.21.
 func Max(a, b int) int {
 	if a > b {
 		return a

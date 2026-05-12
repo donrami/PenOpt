@@ -71,16 +71,28 @@ export function selectFilter(id) {
   invalidateResults();
 }
 
+function _debounce(fn, ms) {
+  var timer = null;
+  return function() {
+    var args = arguments;
+    var ctx = this;
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(function() { timer = null; fn.apply(ctx, args); }, ms);
+  };
+}
+
 export function setupSliders() {
   const eSl = $('sl-energy');
-  eSl.addEventListener('input', () => { S.energy = parseFloat(eSl.value); recalcBeam(); invalidateResults(); });
+  var onEnergyChange = _debounce(function() { recalcBeam(); invalidateResults(); }, 80);
+  eSl.addEventListener('input', () => { S.energy = parseFloat(eSl.value); onEnergyChange(); });
   [30, 50, 76, 100, 150, 200, 300].forEach(v => {
     const btn = document.createElement('button');
     btn.textContent = v; btn.addEventListener('click', () => { eSl.value = v; S.energy = v; recalcBeam(); });
     $('presets-energy').appendChild(btn);
   });
   const tSl = $('sl-tmin');
-  tSl.addEventListener('input', () => { S.tPct = parseFloat(tSl.value); recalcBeam(); invalidateResults(); });
+  var onTminChange = _debounce(function() { recalcBeam(); invalidateResults(); }, 80);
+  tSl.addEventListener('input', () => { S.tPct = parseFloat(tSl.value); onTminChange(); });
   [0.01, 0.05, 0.10, 0.20, 0.50, 1.0, 2.0].forEach(v => {
     const btn = document.createElement('button');
     btn.textContent = v.toFixed(2); btn.addEventListener('click', () => { tSl.value = v; S.tPct = v; recalcBeam(); });

@@ -31,6 +31,7 @@ async function handleFile(file) {
   if (ext !== '.stl' && ext !== '.obj') { showError('Unsupported format'); $('vp-loading').classList.add('hidden'); return; }
   try {
     const buf = await file.arrayBuffer();
+    // Wails v2 expects Array<number> for []byte (Uint8Array serializes as {"0":0,"1":1,...})
     const info = await LoadMeshFromBytes(file.name, Array.from(new Uint8Array(buf)));
     if (!info) { showError('Failed to parse mesh'); $('vp-loading').classList.add('hidden'); return; }
     S.meshInfo = info; S.meshLoaded = true;
@@ -68,14 +69,14 @@ async function handleFile(file) {
       if (matBody) { matBody.classList.add('no-animate'); matBody.style.maxHeight = ''; }
       matCard.classList.add('open');
       matCard.querySelector('.chevron')?.classList.add('open');
-      if (matBody) { void matBody.offsetHeight; matBody.classList.remove('no-animate'); }
+      if (matBody) { requestAnimationFrame(function() { requestAnimationFrame(function() { matBody.classList.remove('no-animate'); }); }); }
     }
     if (optCard) {
       var optBody = optCard.querySelector('.card-body');
       if (optBody) { optBody.classList.add('no-animate'); optBody.style.maxHeight = ''; }
       optCard.classList.add('open');
       optCard.querySelector('.chevron')?.classList.add('open');
-      if (optBody) { void optBody.offsetHeight; optBody.classList.remove('no-animate'); }
+      if (optBody) { requestAnimationFrame(function() { requestAnimationFrame(function() { optBody.classList.remove('no-animate'); }); }); }
     }
     $('vp-loading').classList.add('hidden');
     // New mesh invalidates any previous results
@@ -127,14 +128,14 @@ export async function handlePickedMesh(info) {
       if (matBody) { matBody.classList.add('no-animate'); matBody.style.maxHeight = ''; }
       matCard.classList.add('open');
       matCard.querySelector('.chevron')?.classList.add('open');
-      if (matBody) { void matBody.offsetHeight; matBody.classList.remove('no-animate'); }
+      if (matBody) { requestAnimationFrame(function() { requestAnimationFrame(function() { matBody.classList.remove('no-animate'); }); }); }
     }
     if (optCard) {
       var optBody = optCard.querySelector('.card-body');
       if (optBody) { optBody.classList.add('no-animate'); optBody.style.maxHeight = ''; }
       optCard.classList.add('open');
       optCard.querySelector('.chevron')?.classList.add('open');
-      if (optBody) { void optBody.offsetHeight; optBody.classList.remove('no-animate'); }
+      if (optBody) { requestAnimationFrame(function() { requestAnimationFrame(function() { optBody.classList.remove('no-animate'); }); }); }
     }
     try { localStorage.setItem('penopt-last-mesh', info.name); } catch (_) {}
   } catch (err) { showError('Render error: ' + err.message); }
@@ -171,6 +172,6 @@ export async function removeMesh() {
     if (cb) { cb.classList.add('no-animate'); cb.style.maxHeight = ''; }
     card.classList.remove('open');
     card.querySelector('.chevron')?.classList.remove('open');
-    if (cb) { void cb.offsetHeight; cb.classList.remove('no-animate'); }
+    if (cb) { requestAnimationFrame(function() { requestAnimationFrame(function() { cb.classList.remove('no-animate'); }); }); }
   });
 }

@@ -350,6 +350,8 @@ textarea:focus-visible {
   flex-direction: column;
   gap: var(--sp-2);
   padding: var(--sp-2);
+  contain: layout paint style;
+  will-change: transform;
 }
 
 /* ── Skeleton Loading ── */
@@ -1032,6 +1034,8 @@ textarea:focus-visible {
   display: flex;
   flex-direction: column;
   gap: var(--sp-3);
+  contain: layout paint style;
+  will-change: transform;
 }
 
 /* Summary bar */

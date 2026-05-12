@@ -90,7 +90,9 @@ func TestCombinedScore_Weighted(t *testing.T) {
 	fMtl := []float64{1, 2, 3}
 	fEnergy := []float64{4, 5, 6}
 	fHdn := []float64{7, 8, 9}
-	scores := CombinedScore(fMtl, fEnergy, fHdn, 0.5, 0.3, 0.2, "weighted")
+	fTuy := []float64{0.9, 0.8, 0.7}
+	fBh := []float64{0.1, 0.2, 0.3}
+	scores := CombinedScore(fMtl, fEnergy, fHdn, fTuy, fBh, 0.4, 0.3, 0.15, 0.1, 0.05, "weighted")
 	if len(scores) != 3 {
 		t.Fatalf("expected 3 scores, got %d", len(scores))
 	}
@@ -106,7 +108,9 @@ func TestCombinedScore_Minimax(t *testing.T) {
 	fMtl := []float64{1, 2, 3}
 	fEnergy := []float64{4, 5, 6}
 	fHdn := []float64{7, 8, 9}
-	scores := CombinedScore(fMtl, fEnergy, fHdn, 0.5, 0.3, 0.2, "minimax")
+	fTuy := []float64{0.9, 0.8, 0.7}
+	fBh := []float64{0.1, 0.2, 0.3}
+	scores := CombinedScore(fMtl, fEnergy, fHdn, fTuy, fBh, 0.4, 0.3, 0.15, 0.1, 0.05, "minimax")
 	if len(scores) != 3 {
 		t.Fatalf("expected 3 scores, got %d", len(scores))
 	}

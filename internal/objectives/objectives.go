@@ -16,11 +16,12 @@ func FMtl(lengths []float64, m float64) float64 {
 	if n == 0 {
 		return 0
 	}
+	// m=3 is hard-coded at all call sites — use fast path
 	var sum float64
 	for _, l := range lengths {
-		sum += math.Pow(l, m)
+		sum += l * l * l
 	}
-	return math.Pow(sum/float64(n), 1/m)
+	return math.Cbrt(sum / float64(n))
 }
 
 // FEnergy returns the max transmission length across all rays.

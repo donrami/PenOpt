@@ -26,22 +26,30 @@ export function runOptimization() {
 
   const w = WEIGHT_PRESETS[S.weightPreset];
 
-  // Listen for progress events
+  // Listen for progress events — batched through rAF to avoid layout thrash
+  S._progressTickPending = false;
   runtime.EventsOn('search:progress', function(data) {
     if (S.searchCancel) return;
-    $('progress-fill').style.width = data.pct + '%';
-    $('pr-pct').textContent = Math.round(data.pct) + '%';
-    $('progress-label').textContent = Math.round(data.pct) + '%';
-    $('pr-info').textContent = data.label || 'Evaluating...';
-    // Parse theta/phi from label for HUD
-    var thetaMatch = data.label?.match(/θ=([\d.]+)/);
-    var phiMatch = data.label?.match(/φ=([\d.]+)/);
-    if (thetaMatch && phiMatch) {
-      $('hud-rot').innerHTML = '\u03B8: ' + thetaMatch[1] + '\u00B0 \u03C6: ' + phiMatch[1] + '\u00B0';
+    S._lastProgressData = data;
+    if (!S._progressTickPending) {
+      S._progressTickPending = true;
+      requestAnimationFrame(function() {
+        S._progressTickPending = false;
+        var d = S._lastProgressData;
+        if (!d) return;
+        $('progress-fill').style.width = d.pct + '%';
+        $('pr-pct').textContent = Math.round(d.pct) + '%';
+        $('progress-label').textContent = Math.round(d.pct) + '%';
+        $('pr-info').textContent = d.label || 'Evaluating...';
+        var thetaMatch = d.label?.match(/θ=([\d.]+)/);
+        var phiMatch = d.label?.match(/φ=([\d.]+)/);
+        if (thetaMatch && phiMatch) {
+          $('hud-rot').innerHTML = '\u03B8: ' + thetaMatch[1] + '\u00B0 \u03C6: ' + phiMatch[1] + '\u00B0';
+        }
+        var offset = 100.53 - (d.pct / 100) * 100.53;
+        $('pr-fill').style.strokeDashoffset = Math.max(0, offset);
+      });
     }
-    // Update progress ring
-    var offset = 100.53 - (data.pct / 100) * 100.53;
-    $('pr-fill').style.strokeDashoffset = Math.max(0, offset);
   });
 
   // Listen for done event
@@ -83,7 +91,7 @@ export function runOptimization() {
   });
 
   // Start the search (returns "started" immediately, results via events)
-  RunOptimization({ weights: [w.wMtl, w.wEnergy, w.wHdn], method: S.method })
+  RunOptimization({ weights: [w.wMtl, w.wEnergy, w.wHdn, w.wTuy, w.wBh], method: S.method })
     .catch(function(err) {
       if (!S.searchCancel) showError('Failed to start search: ' + err);
       runtime.EventsOff('search:progress');
@@ -301,23 +309,26 @@ export function setupCardAccordion() {
       if (chev) chev.classList.toggle('open');
 
       if (wasOpen) {
-        // Close: clear any lingering inline max-height, measure the full
-        // rendered height (incl. padding via .open CSS), then animate to 0
+        // Close: measure full height, set as starting point, then animate to 0
+        // Uses double-rAF to let the browser paint the start state before transitioning
         body.style.maxHeight = '';
         var closeH = body.scrollHeight;
         body.style.maxHeight = closeH + 'px';
-        // Force reflow so the browser registers the starting point
-        void body.offsetHeight;
-        body.style.maxHeight = '0px';
+        requestAnimationFrame(function() {
+          requestAnimationFrame(function() {
+            body.style.maxHeight = '0px';
+          });
+        });
       } else {
-        // Open: ensure no constraint, measure content height (padding is now
-        // restored via .open CSS), animate from 0 to full height
+        // Open: measure target height, set to 0 first, then animate to full
         body.style.maxHeight = '';
         var h = body.scrollHeight;
         body.style.maxHeight = '0px';
-        // Force reflow so the browser registers the starting point
-        void body.offsetHeight;
-        body.style.maxHeight = h + 'px';
+        requestAnimationFrame(function() {
+          requestAnimationFrame(function() {
+            body.style.maxHeight = h + 'px';
+          });
+        });
       }
     });
   });

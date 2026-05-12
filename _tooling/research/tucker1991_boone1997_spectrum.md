@@ -25,51 +25,77 @@ A semiempirical model for generating tungsten target x-ray spectra is presented.
 
 A method for computer-generating tungsten anode x-ray spectra from 30 to 140 kV is presented. The model uses a simple polynomial parameterisation of the bremsstrahlung spectrum and incorporates K-characteristic lines. The resulting spectra agree with measured data to within 3% across the diagnostic energy range. The method is computationally efficient and suitable for integration into simulation and optimisation codes.
 
-## Role in PenOpt (PenOpt: `internal/physics/spectrum.go`)
+## Status in PenOpt: **Simplified Heuristic Spectrum**
 
-### 1. Tucker/Boone Spectrum Generator (`TuckerBooneSpectrum`)
+> ⚠️ **SIMPLIFIED IMPLEMENTATION — Tucker/Boone spectrum generator not built.**
+> The full Tucker/Boone model with depth-dependent bremsstrahlung and K-characteristic lines is not implemented. PenOpt uses a heuristic continuum spectrum for effective-energy computation. See below for details.
 
-PenOpt implements a **simplified Tucker/Boone model** that captures the essential physics:
+### What Actually Exists
+
+PenOpt's only spectrum-aware code lives in **`internal/physics/material.go`**, specifically the function `ComputeEffectiveEnergy()` (not a standalone `spectrum.go` file). This function uses a **120-point heuristic spectrum** to compute effective beam energy after filter attenuation:
 
 ```
-N(E) ∝ E × exp(-3 × E / kV)    — bremsstrahlung continuum
-      + Kα, Kβ characteristic lines at 59.3, 57.9, 67.2, 69.0 keV
+N(E) ∝ max(0, (kVp − E) / E)    — heuristic bremsstrahlung continuum (no characteristic lines)
 ```
 
-| Aspect | Full Tucker/Boone | PenOpt Simplified |
+The key function:
+
+```go
+func ComputeEffectiveEnergy(EInput float64, layers []FilterLayer) EffectiveEnergyResult
+```
+
+| Aspect | Full Tucker/Boone | PenOpt Implementation |
 |---|---|---|
-| **Physics model** | Depth-dependent bremsstrahlung + characteristic production | Simplified continuum + fixed line energies |
-| **Number of energy bins** | Continuous / high-resolution | 100 bins (10 keV resolution) |
-| **Anode angle** | Full angular dependence | Single parameter (default 12°) |
-| **Filtering** | Not included in base model | Separate `ApplyFilter()` function |
+| **Physics model** | Depth-dependent bremsstrahlung + characteristic production | Simple heuristic: φ(E) ∝ max(0, (kVp−E)/E) |
+| **Characteristic lines** | Kα, Kβ at precise energies with relative intensities | **Not modeled** |
+| **Energy bins** | Continuous / high-resolution | 120 bins (uniform from 20 keV to kVp) |
+| **Anode angle** | Full angular dependence | Not modeled (implicitly assumes 0°) |
+| **Filtering** | Not included in base model | Separate `FilterTrans(E, layers)` function |
 | **Normalisation** | Physical units (photons/mm²/mAs) | Sum = 1.0 (unit normalised) |
-| **Characteristic lines** | Full intensity ratio model | Fixed Gaussian peaks at W K-lines |
+| **Self-filtration** | Beryllium window, oil, inherent filtration | **Not modeled** |
 
-### 2. Usage in PenOpt
+### Usage in PenOpt
 
 | Function | Location | Purpose |
 |---|---|---|
-| `TuckerBooneSpectrum(kV, anodeAngle)` | `spectrum.go:10` | Generate 100-bin polychromatic spectrum |
-| `EnergyBins(kV)` | `spectrum.go:90` | Bin centre energies for the spectrum |
-| `FastSpectrum(kV, anodeAngle)` | `spectrum.go:167` | 10-bin coarse spectrum for optimisation loops |
-| `ApplyFilter(spectrum, energyBins, filter)` | `spectrum.go:130` | Apply Cu/Al/Zn beam filter attenuation |
+| `ComputeEffectiveEnergy(kV, filterLayers)` | `material.go:136` | Compute effective beam energy via 120-point heuristic spectrum integration |
+| `FilterTrans(E, layers)` | `material.go:126` | Attenuation through multi-layer beam filter |
+| `HVLCu(E)` | `material.go:165` | Copper half-value layer (mm) at energy E |
+| `RecommendKVWithFilter(mat, pen, Tmin, filters)` | `material.go:182` | Sweep 50–500 kV to find minimum voltage achieving target transmission |
 
-### 3. Integration with Physics Pipeline
+### Integration with Physics Pipeline
 
 ```
-TuckerBooneSpectrum(kV, 12°)  →  ApplyFilter(..., filter)
+RecommendKVWithFilter(mat, maxPenetrationMM, Tmin, filterLayers)
        ↓
-EnergyBins(kV)  +  material μ(E) data (NIST XCOM)
+ComputeEffectiveEnergy(kVguess, filterLayers)     ← heuristic 120-point spectrum
        ↓
-Polychromatic transmission for each ray
+CalcMu(mat, keff)                                 ← NIST XCOM interpolation
        ↓
-f_bh (beam-hardening objective), AdvancedPhysics mode
+CalcTransmission(mu, maxPenetrationMM)            ← Beer-Lambert
+       ↓
+If T >= Tmin → return kVguess
 ```
 
-## Deviations from Literature
+## Deviations from Literature (Critical)
 
-- PenOpt uses a simplified continuum formula (`E×exp(-3E/kV)`) rather than Tucker's depth-dependent bremsstrahlung model
-- Characteristic line intensities are fixed rather than computed from K-shell ionisation cross-section
-- The 10-bin coarse spectrum (`FastSpectrum`) is a PenOpt addition, not from the literature
-- No self-filtration or inherent filtration modelling (beryllium window, oil, etc.)
-- Spectral validation against published Tucker/Boone spectra has not been performed
+1. **No Tucker/Boone spectrum model.** The full depth-dependent bremsstrahlung model from Tucker 1991 is not implemented. The heuristic `(kVp−E)/E` formula is not grounded in any published model.
+2. **No characteristic tungsten K-lines.** The Tucker and Boone models both include Kα (59.3, 57.9 keV) and Kβ (67.2, 69.0 keV) lines with intensity ratios derived from K-shell ionisation cross-sections. PenOpt omits these entirely. This biases effective energy low when kVp exceeds the W K-edge (69.5 keV).
+3. **No self-filtration.** Real X-ray tubes have beryllium exit windows, oil cooling, and inherent filtration that harden the beam before it reaches any user-added filter. PenOpt does not model this, overestimating flux at low energies.
+4. **No anode-angle dependence.** The heel effect and spectral hardening from angled anode targets are not modeled.
+5. **Unvalidated effective energy.** The output of `ComputeEffectiveEnergy()` has never been compared against published Tucker/Boone spectra or measured beam quality data (HVL matching).
+
+## Effect on Accuracy
+
+The heuristic spectrum underestimates beam hardening. For a 200 kV beam with 1 mm Cu filter:
+- True effective energy (Tucker/Boone): ~100–120 keV (depending on anode angle)
+- PenOpt effective energy: likely lower due to missing characteristic lines and self-filtration
+- **kV recommendation may overestimate required tube voltage** by 10–30 kV depending on filtration and material
+
+## Roadmap to Full Tucker/Boone Implementation
+
+- [ ] Implement `TuckerBooneSpectrum(kV, anodeAngle float64) []float64` generating 1 keV-bin spectrum
+- [ ] Add tungsten Kα/Kβ characteristic lines with proper intensity ratios (from Boone 1997 polynomial parameterisation)
+- [ ] Add inherent filtration model (0.8 mm Be + oil equivalent)
+- [ ] Validate effective energy against published HVL curves from manufacturer data
+- [ ] Cross-validate kV recommendations against published CT protocol tables

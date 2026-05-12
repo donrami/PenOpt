@@ -47,11 +47,12 @@
   document.addEventListener('DOMContentLoaded', tryApply);
   if (document.readyState !== 'loading') tryApply();
 
-  // Re-apply on dynamic content changes (e.g. new scrollable containers)
+  // Fallback: observe until the first successful application, then disconnect
   if (typeof MutationObserver !== 'undefined') {
-    new MutationObserver(function() {
-      if (!enforced && document.body) { apply(); enforced = true; }
-    }).observe(document.documentElement, { childList: true, subtree: true });
+    var mo = new MutationObserver(function() {
+      if (!enforced && document.body) { apply(); enforced = true; mo.disconnect(); }
+    });
+    mo.observe(document.documentElement, { childList: true, subtree: true });
   }
 })();
 
@@ -208,11 +209,17 @@ function setupTooltips() {
     tooltipTarget = null;
   }, true);
 
-  // Reposition on scroll/resize while active
+  // Reposition on scroll/resize while active — rAF-coalesced to avoid layout thrash
+  var _tipTickPending = false;
   function reposition() {
-    if (tooltipEl && tooltipTarget && document.body.contains(tooltipTarget)) {
-      positionTooltip(tooltipEl, tooltipTarget, tooltipEl.textContent);
-    }
+    if (_tipTickPending) return;
+    _tipTickPending = true;
+    requestAnimationFrame(function() {
+      _tipTickPending = false;
+      if (tooltipEl && tooltipTarget && document.body.contains(tooltipTarget)) {
+        positionTooltip(tooltipEl, tooltipTarget, tooltipEl.textContent);
+      }
+    });
   }
   window.addEventListener('scroll', reposition, { capture: true, passive: true });
   window.addEventListener('resize', reposition, { passive: true });

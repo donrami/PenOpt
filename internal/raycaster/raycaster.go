@@ -4,7 +4,6 @@ package raycaster
 
 import (
 	"math"
-	"sort"
 	"sync"
 	"time"
 
@@ -126,10 +125,17 @@ func ComputeTransmissionLengths(theta, phi float64, bvhTree *bvh.BVH, cfg Scanne
 	var wg sync.WaitGroup
 	wg.Add(cfg.NumProjections)
 
+	// Pre-compute orientation rotation trig (constant for all rays in this orientation)
+	cosP, sinP := math.Cos(-phiRad), math.Sin(-phiRad)
+	cosT, sinT := math.Cos(-thetaRad), math.Sin(-thetaRad)
+
 	for alpha := 0; alpha < cfg.NumProjections; alpha++ {
 		go func(alpha int) {
 			defer wg.Done()
 			alphaRad := float64(alpha) * 2 * math.Pi / float64(cfg.NumProjections)
+
+			// Pre-compute projection rotation trig (constant for all rays in this projection)
+			cosA, sinA := math.Cos(-alphaRad), math.Sin(-alphaRad)
 
 			var maxLen float64
 			offset := alpha * raysPerProj
@@ -140,19 +146,37 @@ func ComputeTransmissionLengths(theta, phi float64, bvhTree *bvh.BVH, cfg Scanne
 				localOrigin := worldOrigin
 				localDir := worldDir
 
-				localOrigin = vec.RotateY(localOrigin, -alphaRad)
-				localDir = vec.RotateY(localDir, -alphaRad)
-				localOrigin = vec.RotateY(localOrigin, -phiRad)
-				localDir = vec.RotateY(localDir, -phiRad)
-				localOrigin = vec.RotateX(localOrigin, -thetaRad)
-				localDir = vec.RotateX(localDir, -thetaRad)
-				localDir = vec.Normalize(localDir)
+				// RotateY by -alphaRad (inline — avoid vec.RotateY which recomputes trig)
+				ox, oz := localOrigin.X, localOrigin.Z
+				localOrigin.X = ox*cosA + oz*sinA
+				localOrigin.Z = -ox*sinA + oz*cosA
+				dx, dz := localDir.X, localDir.Z
+				localDir.X = dx*cosA + dz*sinA
+				localDir.Z = -dx*sinA + dz*cosA
+
+				// RotateY by -phiRad (inline)
+				ox, oz = localOrigin.X, localOrigin.Z
+				localOrigin.X = ox*cosP + oz*sinP
+				localOrigin.Z = -ox*sinP + oz*cosP
+				dx, dz = localDir.X, localDir.Z
+				localDir.X = dx*cosP + dz*sinP
+				localDir.Z = -dx*sinP + dz*cosP
+
+				// RotateX by -thetaRad (inline)
+				oy, oz := localOrigin.Y, localOrigin.Z
+				localOrigin.Y = oy*cosT - oz*sinT
+				localOrigin.Z = oy*sinT + oz*cosT
+				dy, dz := localDir.Y, localDir.Z
+				localDir.Y = dy*cosT - dz*sinT
+				localDir.Z = dy*sinT + dz*cosT
+
+				// Direction is still unit length after orthogonal rotations — no Normalize needed
 
 				hits, _ := bvhTree.IntersectAll(localOrigin, localDir)
 
 				var penetration float64
 				if len(hits) > 1 {
-					sort.Float64s(hits)
+					// hits are sorted by IntersectAll
 					for i := 0; i < len(hits)-1; i += 2 {
 						if i+1 < len(hits) {
 							seg := hits[i+1] - hits[i]
@@ -231,38 +255,76 @@ func ComputeFacePenetrations(m *mesh.Mesh, bvhTree *bvh.BVH,
 	var wg sync.WaitGroup
 	wg.Add(numProjections)
 
+	// Pre-compute orientation rotation trig (constant for all projections)
+	cosP, sinP := math.Cos(-phiRad), math.Sin(-phiRad)
+	cosT, sinT := math.Cos(-thetaRad), math.Sin(-thetaRad)
+	// Forward trig for centroid rotations
+	cosPf, sinPf := math.Cos(phiRad), math.Sin(phiRad)
+	cosTf, sinTf := math.Cos(thetaRad), math.Sin(thetaRad)
+
 	for alpha := 0; alpha < numProjections; alpha++ {
 		go func(alpha int) {
 			defer wg.Done()
 			alphaRad := float64(alpha) * 2 * math.Pi / float64(numProjections)
 
+			// Pre-compute projection rotation trig
+			cosA, sinA := math.Cos(-alphaRad), math.Sin(-alphaRad)
+			cosAf, sinAf := math.Cos(alphaRad), math.Sin(alphaRad)
+
+			// Rotate source position by inverse rotation (inline)
 			localSrc := sourcePos
-			localSrc = vec.RotateY(localSrc, -alphaRad)
-			localSrc = vec.RotateY(localSrc, -phiRad)
-			localSrc = vec.RotateX(localSrc, -thetaRad)
+			ox, oz := localSrc.X, localSrc.Z
+			localSrc.X = ox*cosA + oz*sinA
+			localSrc.Z = -ox*sinA + oz*cosA
+			ox, oz = localSrc.X, localSrc.Z
+			localSrc.X = ox*cosP + oz*sinP
+			localSrc.Z = -ox*sinP + oz*cosP
+			oy, oz := localSrc.Y, localSrc.Z
+			localSrc.Y = oy*cosT - oz*sinT
+			localSrc.Z = oy*sinT + oz*cosT
 
 			localMax := make([]float64, numFaces)
 
 			for fi := 0; fi < numFaces; fi++ {
-				worldCentroid := centroids[fi]
-				worldCentroid = vec.RotateX(worldCentroid, thetaRad)
-				worldCentroid = vec.RotateY(worldCentroid, phiRad)
-				worldCentroid = vec.RotateY(worldCentroid, alphaRad)
+				// Rotate centroid by forward orientation + projection (inline)
+				wc := centroids[fi]
+				// RotateX by thetaRad (forward)
+				oy, oz := wc.Y, wc.Z
+				wc.Y = oy*cosTf - oz*sinTf
+				wc.Z = oy*sinTf + oz*cosTf
+				// RotateY by phiRad (forward)
+				ox, oz := wc.X, wc.Z
+				wc.X = ox*cosPf + oz*sinPf
+				wc.Z = -ox*sinPf + oz*cosPf
+				// RotateY by alphaRad (forward)
+				ox, oz = wc.X, wc.Z
+				wc.X = ox*cosAf + oz*sinAf
+				wc.Z = -ox*sinAf + oz*cosAf
 
-				rayDir := vec.Sub(worldCentroid, sourcePos)
+				rayDir := vec.Sub(wc, sourcePos)
 				rayDir = vec.Normalize(rayDir)
 
+				// Ray direction is unit length after first Normalize
+				// Inverse rotation preserves length, so second Normalize is redundant
 				localDir := rayDir
-				localDir = vec.RotateY(localDir, -alphaRad)
-				localDir = vec.RotateY(localDir, -phiRad)
-				localDir = vec.RotateX(localDir, -thetaRad)
-				localDir = vec.Normalize(localDir)
+				// RotateY by -alphaRad (inverse)
+				dx, dz := localDir.X, localDir.Z
+				localDir.X = dx*cosA + dz*sinA
+				localDir.Z = -dx*sinA + dz*cosA
+				// RotateY by -phiRad (inverse)
+				dx, dz = localDir.X, localDir.Z
+				localDir.X = dx*cosP + dz*sinP
+				localDir.Z = -dx*sinP + dz*cosP
+				// RotateX by -thetaRad (inverse)
+				dy, dz := localDir.Y, localDir.Z
+				localDir.Y = dy*cosT - dz*sinT
+				localDir.Z = dy*sinT + dz*cosT
 
 				hits, _ := bvhTree.IntersectAll(localSrc, localDir)
 
 				var penetration float64
 				if len(hits) > 1 {
-					sort.Float64s(hits)
+					// hits are sorted by IntersectAll
 					for i := 0; i < len(hits)-1; i += 2 {
 						if i+1 < len(hits) {
 							seg := hits[i+1] - hits[i]

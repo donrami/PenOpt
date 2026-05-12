@@ -47,14 +47,32 @@ export function initScene() {
   if (S.labelsGroup) S.labelsGroup.visible = false;
 
   // Render on demand — only when controls change or programmatic updates
-  function render() { if (S.renderer) S.renderer.render(S.scene, S.camera); }
-  controls.addEventListener('change', render);
-  S.renderScene = render;
-  render();
+  // ── rAF-coalesced render — at most one Three.js render per frame ──
+  let _renderQueued = false;
+  S.renderScene = function() {
+    if (!_renderQueued) {
+      _renderQueued = true;
+      requestAnimationFrame(function() {
+        _renderQueued = false;
+        if (S.renderer) S.renderer.render(S.scene, S.camera);
+      });
+    }
+  };
+  controls.addEventListener('change', S.renderScene);
+  S.renderScene();
 
   // Auto-resize viewport when layout changes (results toggle, layout mode, sidebar)
-  // Catches all container size changes without manual calls everywhere
-  const ro = new ResizeObserver(function() { resizeViewport(); });
+  // Debounced via rAF — prevents cascade re-renders from rapid layout changes
+  let _resizePending = false;
+  const ro = new ResizeObserver(function() {
+    if (!_resizePending) {
+      _resizePending = true;
+      requestAnimationFrame(function() {
+        _resizePending = false;
+        resizeViewport();
+      });
+    }
+  });
   ro.observe(c);
   S._resizeObserver = ro;
 }

@@ -3,6 +3,7 @@ package mesh
 
 import (
 	"fmt"
+	"math"
 )
 
 // Vec3 is a 3D vector.
@@ -113,12 +114,20 @@ func (m *Mesh) CheckWatertight() (bool, int) {
 	}
 
 	// Deduplicate vertices by rounding to 4 decimal places
-	vertMap := make(map[string]int)
+	// Use a struct key instead of fmt.Sprintf to avoid heap-allocated strings
+	type roundedVert struct {
+		X, Y, Z float64
+	}
+	vertMap := make(map[roundedVert]int)
 	dupIdx := make([]int, 0, m.NumTris*3)
 
 	for _, tri := range m.Triangles {
 		for _, v := range []Vec3{tri.V0, tri.V1, tri.V2} {
-			key := fmt.Sprintf("%.4f,%.4f,%.4f", v.X, v.Y, v.Z)
+			key := roundedVert{
+				X: math.Round(v.X*10000) / 10000,
+				Y: math.Round(v.Y*10000) / 10000,
+				Z: math.Round(v.Z*10000) / 10000,
+			}
 			if idx, ok := vertMap[key]; ok {
 				dupIdx = append(dupIdx, idx)
 			} else {
@@ -155,19 +164,7 @@ func (m *Mesh) CheckWatertight() (bool, int) {
 	return boundary == 0, boundary
 }
 
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
+// min and max are replaced by Go 1.21 builtins — see calls to min()/max() below.
 
 // CenterAtOrigin translates all vertices so the mesh bounding box is centered
 // at the origin. This is important because the ray caster assumes the mesh is

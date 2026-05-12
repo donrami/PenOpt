@@ -39,12 +39,6 @@ type Filter struct {
 	Layers []FilterLayer `json:"layers"`
 }
 
-// ── helpers ──
-
-func mu(energy float64, pts []MuRhoPoint) float64 {
-	return LogLogInterp(energy, pts)
-}
-
 // ── Public API ──
 
 // Materials returns the full NIST XCOM material database (40+ materials + AM variants).

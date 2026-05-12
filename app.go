@@ -102,11 +102,10 @@ func (a *App) GetDefaultScannerConfig() raycaster.ScannerConfig { return a.Scann
 // ComputeFaceHeatmap computes per-face max penetration at (theta, phi).
 func (a *App) ComputeFaceHeatmap(theta, phi float64) string { return a.ScannerAPI.ComputeFaceHeatmap(theta, phi) }
 
-// ── Events (kept for Wails compatibility) ──
+// ── Events ──
 
 // EmitProgress sends a progress event to the frontend during optimization.
+// Deprecated: progress is now emitted directly via runtime.EventsEmit in internal/app/optimizer.go.
 func (a *App) EmitProgress(pct float64, label string) {
-	_ = a.ctx
-	_ = pct
-	_ = label
+	// no-op: kept for backward compatibility with older frontend builds
 }
