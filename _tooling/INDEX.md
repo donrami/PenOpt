@@ -11,8 +11,7 @@
 |---|---|
 | Understand the app architecture, tech stack, and how things fit together | [`reference/HANDOFF.md`](reference/HANDOFF.md) |
 | See the project file tree and source code layout | [`reference/PROJECT_TREE.md`](reference/PROJECT_TREE.md) |
-| Learn the domain language (mesh, orientation, projection, ray, BVH…) | [`../../CONTEXT.md`](../../CONTEXT.md) (project root) |
-| Understand an architecture decision (why ψ replaced φ, etc.) | [`adr/`](adr/) |
+| Learn the domain language (mesh, orientation, projection, ray, BVH…) | [`../../CONTEXT.md`](../../CONTEXT.md) (project root) || 
 | Read the research papers this project implements | [`research/`](research/) |
 | Review implementation specs and sprint plans | [`specs/`](specs/) |
 | See audit reports (correctness, paper alignment, UI quality) | [`audits/`](audits/) |
@@ -37,16 +36,16 @@ _tooling/
 │   ├── SPRINT2_SPEC.md            # Sprint 2: Butzhammer Method B + surface-fraction
 │   ├── SPRINT3_SPEC.md            # Sprint 3: Radon space, critical faces, Pareto front
 │   ├── phase0-rotation-fix-spec.md       # Phase 0: φ→ψ rotation axis fix
-│   └── UI-REFACTOR-TASKS.md       # Phased CSS/UI refactoring task list
+│   ├── UI-REFACTOR-TASKS.md       # Phased CSS/UI refactoring task list
+│   └── REMEDIATION_PLAN.md        # Spec-driven plan: expert review + oracle corrections → 19 tasks across 5 phases
 │
 ├── audits/                        # Audits, gap analyses, and reviews
 │   ├── GUI_AUDIT.md               # UX heuristic audit against reference app
 │   ├── oracle-scrutiny.md         # Cross-check of audit claims against research files
 │   ├── paper-alignment-audit.md   # Full fidelity audit against 9 academic references
-│   └── PHASE3_GAPS.md             # Gap analysis for Phase 3 features
-│
-├── adr/                           # Architecture Decision Records
-│   └── adr-0001-replace-phi-with-psi.md   # φ→ψ tilt axis replacement
+│   ├── PHASE3_GAPS.md             # Gap analysis for Phase 3 features
+│   ├── EXPERT_REVIEW.md           # Expert review: scientific accuracy, performance, UX/UI
+│   └── ORACLE_REVIEW.md            # Oracle 2nd opinion: challenges EXPERT_REVIEW claims against ground truth
 │
 └── research/                      # Academic paper reference files (one per paper)
     ├── README.md                  # Index of all papers with venues & usage

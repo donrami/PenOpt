@@ -1,6 +1,9 @@
 // Package objectives implements the optimization objective functions
 // from Ito et al. 2020: f_mtl (generalized mean), f_energy (max transmission),
-// and f_hdn (projection area range).
+// f_hdn (penetration range), and f_tuy (Tuy-Smith completeness).
+// Additional objectives (beam hardening, scatter, cone-beam, uncertainty)
+// are defined but require per-face or per-projection data not collected
+// by the sparse ray grid — they are available in NSGA-II+AdvancedPhysics mode.
 package objectives
 
 import "math"
@@ -33,10 +36,10 @@ func FEnergy(lengths []float64) float64 {
 	return max
 }
 
-// FHdn computes the projection area range Amax−Amin (Ito 2020 eq 2).
-// A projection area = number of rays that hit the object.
-// We use maxPerProjection to compute the heuristic: the range of max
-// transmission lengths across projections gives a measure of isotropy.
+// FHdn computes the penetration range: max − min of per-projection
+// max penetration lengths. This approximates the projection range
+// concept from Ito 2020 eq 2 (which uses silhouette area), but uses
+// max X-ray path length as a fast geometric proxy.
 // Lower f_hdn = more isotropic = better.
 func FHdn(maxPerProjection []float64) float64 {
 	if len(maxPerProjection) == 0 {

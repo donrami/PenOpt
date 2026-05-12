@@ -7,8 +7,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-  <script type="module" crossorigin src="/assets/index.9a51f06f.js"></script>
-  <link rel="stylesheet" href="/assets/index.26d0900c.css">
+  <script type="module" crossorigin src="/assets/index.c7f46267.js"></script>
+  <link rel="stylesheet" href="/assets/index.8ad375dc.css">
 </head>
 <body>
   <div id="app">
@@ -154,22 +154,6 @@
                   <label>Det. H (mm) <input type="number" id="cfg-deth" value="400" step="20" /></label>
                   <label>Pixels X <input type="number" id="cfg-px" value="1024" min="64" max="4096" /></label>
                   <label>Pixels Y <input type="number" id="cfg-py" value="1024" min="64" max="4096" /></label>
-                </div>
-              </div>
-            </div>
-
-            <!-- Acc: Ray Grid -->
-            <div class="acc">
-              <div class="acc-head" data-acc="raygrid">
-                <span>Ray Grid</span>
-                <span class="acc-val" id="acc-ray-val">32&sup2;</span>
-                <svg class="acc-chev" width="8" height="8" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l4 4 4-4"/></svg>
-              </div>
-              <div class="acc-body" id="acc-raygrid">
-                <div class="ray-options" id="ray-options">
-                  <div class="ray-opt" data-grid="16">16&sup2;</div>
-                  <div class="ray-opt active" data-grid="32">32&sup2;</div>
-                  <div class="ray-opt" data-grid="64">64&sup2;</div>
                 </div>
               </div>
             </div>
@@ -376,9 +360,12 @@
             <p><strong>5.</strong> Interpret results — optimal angles, heatmap, contour plot, energy recommendation.</p>
             <h3>Objective Functions</h3>
             <ul>
-              <li><strong>f<sub>mtl</sub></strong> — Generalized mean of lengths (cube-root, m=3). Lower = less artifact.</li>
-              <li><strong>f<sub>hdn</sub></strong> — Projection area range. Lower = less beam hardening variation.</li>
+              <li><strong>f<sub>mtl</sub></strong> — Generalized mean of penetration lengths (cube-root, m=3). Lower = less artifact from thick cross-sections.</li>
+              <li><strong>f<sub>energy</sub></strong> — Maximum penetration length. Determines required X-ray tube voltage.</li>
+              <li><strong>f<sub>hdn</sub></strong> — Penetration range (max&minus;min per projection). Lower = more isotropic ray paths.</li>
+              <li><strong>f<sub>tuy</sub></strong> — Tuy-Smith completeness fraction. Fraction of faces with at least one tangent ray. Higher = fewer cone-beam artifacts. Warning shown below 90%.</li>
             </ul>
+            <p><em>Note: These are the four active objectives. Extended objectives (beam hardening, scatter, cone-beam angle, measurement uncertainty) are available in development mode.</em></p>
             <h3>Keyboard Shortcuts</h3>
             <ul>
               <li><kbd>Ctrl+O</kbd> — Open file</li>

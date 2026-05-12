@@ -156,22 +156,6 @@
               </div>
             </div>
 
-            <!-- Acc: Ray Grid -->
-            <div class="acc">
-              <div class="acc-head" data-acc="raygrid">
-                <span>Ray Grid</span>
-                <span class="acc-val" id="acc-ray-val">32&sup2;</span>
-                <svg class="acc-chev" width="8" height="8" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l4 4 4-4"/></svg>
-              </div>
-              <div class="acc-body" id="acc-raygrid">
-                <div class="ray-options" id="ray-options">
-                  <div class="ray-opt" data-grid="16">16&sup2;</div>
-                  <div class="ray-opt active" data-grid="32">32&sup2;</div>
-                  <div class="ray-opt" data-grid="64">64&sup2;</div>
-                </div>
-              </div>
-            </div>
-
           </div>
         </section>
 
@@ -374,9 +358,12 @@
             <p><strong>5.</strong> Interpret results — optimal angles, heatmap, contour plot, energy recommendation.</p>
             <h3>Objective Functions</h3>
             <ul>
-              <li><strong>f<sub>mtl</sub></strong> — Generalized mean of lengths (cube-root, m=3). Lower = less artifact.</li>
-              <li><strong>f<sub>hdn</sub></strong> — Projection area range. Lower = less beam hardening variation.</li>
+              <li><strong>f<sub>mtl</sub></strong> — Generalized mean of penetration lengths (cube-root, m=3). Lower = less artifact from thick cross-sections.</li>
+              <li><strong>f<sub>energy</sub></strong> — Maximum penetration length. Determines required X-ray tube voltage.</li>
+              <li><strong>f<sub>hdn</sub></strong> — Penetration range (max&minus;min per projection). Lower = more isotropic ray paths.</li>
+              <li><strong>f<sub>tuy</sub></strong> — Tuy-Smith completeness fraction. Fraction of faces with at least one tangent ray. Higher = fewer cone-beam artifacts. Warning shown below 90%.</li>
             </ul>
+            <p><em>Note: These are the four active objectives. Extended objectives (beam hardening, scatter, cone-beam angle, measurement uncertainty) are available in development mode.</em></p>
             <h3>Keyboard Shortcuts</h3>
             <ul>
               <li><kbd>Ctrl+O</kbd> — Open file</li>

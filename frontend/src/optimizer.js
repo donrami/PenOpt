@@ -63,8 +63,10 @@ export function runOptimization() {
       showResults(result);
       renderIntelliScan(result);
       // Redraw rose with IntelliScan ticks
-      if (result.penetrationRose && result.intelliScan) {
-        drawPenetrationRose(result.penetrationRose, result.worstPenetrationRose, result.isPartial, null, result.intelliScan.angles);
+      var bestProj = result.bestOrientation && result.bestOrientation.maxPerProjection;
+      var worstProj = result.worstOrientation && result.worstOrientation.maxPerProjection;
+      if (bestProj && bestProj.length >= 2 && result.intelliScan) {
+        drawPenetrationRose(bestProj, worstProj, result.isPartial, null, result.intelliScan.angles);
       }
       $('progress-ring').classList.add('hidden');
       loadHeatmap(result);
@@ -108,21 +110,50 @@ function showResults(result) {
   $('rs-angle').textContent = `\u03B8=${best.theta}\u00B0 \u03C6=${best.phi}\u00B0`;
   $('rs-fmtl').textContent = ((bestScore.fMtl - worstScore.fMtl) / worstScore.fMtl * 100).toFixed(1) + '%';
   $('rs-fenergy').textContent = ((bestScore.fEnergy - worstScore.fEnergy) / worstScore.fEnergy * 100).toFixed(1) + '%';
-  $('rs-evals').textContent = result.allScores.length + ' orientations';
+  var totalEval = result.allScores.length;
+  var coarseEval = result.numCoarseEval || 0;
+  var fineEval = result.numFineEval || 0;
+  var timeStr = result.searchTimeMs.toFixed(0) + 'ms';
+  if (result.coarseTimeMs) {
+    timeStr = result.coarseTimeMs.toFixed(0) + '+' + result.fineTimeMs.toFixed(0) + 'ms';
+  }
+  $('rs-evals').textContent = totalEval + ' orientations (' + timeStr + ')';
+  $('rs-evals').parentElement.title = coarseEval + ' coarse + ' + fineEval + ' fine | ' + result.searchTimeMs.toFixed(0) + 'ms total';
 
   // Optimal orientation card
   $('opt-angles').textContent = `\u03B8 = ${best.theta}\u00B0  \u03C6 = ${best.phi}\u00B0`;
   const pct = (bv, wv) => { if (!wv) return '--'; const ch = ((bv - wv) / wv * 100); return (ch >= 0 ? '+' : '') + ch.toFixed(1) + '%'; };
   const style = (ch) => ch < 0 ? 'style="color:var(--green-500)"' : '';
 
+  var fTuyBest = bestScore.fTuy !== undefined ? (bestScore.fTuy * 100).toFixed(1) + '%' : '--';
+  var fTuyWorst = worstScore.fTuy !== undefined ? (worstScore.fTuy * 100).toFixed(1) + '%' : '--';
+  var pctTuy = (bestScore.fTuy !== undefined && worstScore.fTuy !== undefined) ? ((bestScore.fTuy - worstScore.fTuy) * 100 / (worstScore.fTuy || 1)).toFixed(1) + '%' : '--';
+
   const rows = [
     ['f_mtl', worstScore.fMtl.toFixed(3), bestScore.fMtl.toFixed(3), pct(bestScore.fMtl, worstScore.fMtl), (bestScore.fMtl - worstScore.fMtl)],
     ['f_energy', worstScore.fEnergy.toFixed(1) + ' mm', bestScore.fEnergy.toFixed(1) + ' mm', pct(bestScore.fEnergy, worstScore.fEnergy), (bestScore.fEnergy - worstScore.fEnergy)],
     ['f_hdn', worstScore.fHdn.toFixed(3), bestScore.fHdn.toFixed(3), pct(bestScore.fHdn, worstScore.fHdn), (bestScore.fHdn - worstScore.fHdn)],
+    ['f_tuy', fTuyWorst, fTuyBest, pctTuy, (bestScore.fTuy - worstScore.fTuy)],
   ];
   $('opt-table-body').innerHTML = rows.map(r =>
     `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td ${style(r[4])}>${r[3]}</td></tr>`
   ).join('');
+
+  // Tuy completeness warning
+  var tuyWarn = $('tuy-warning');
+  if (bestScore.fTuy !== undefined && bestScore.fTuy < 0.90) {
+    var tuyPct = (bestScore.fTuy * 100).toFixed(0);
+    if (!tuyWarn) {
+      tuyWarn = document.createElement('div');
+      tuyWarn.id = 'tuy-warning';
+      tuyWarn.style.cssText = 'margin-top:8px;padding:6px 8px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);border-radius:4px;font-size:10px;color:var(--amber-500);display:flex;align-items:center;gap:6px';
+      $('opt-angles').parentElement.appendChild(tuyWarn);
+    }
+    tuyWarn.innerHTML = '\u26A0 Only ' + tuyPct + '% of faces satisfy Tuy-Smith condition — cone-beam artifacts may occur';
+    tuyWarn.style.display = '';
+  } else if (tuyWarn) {
+    tuyWarn.style.display = 'none';
+  }
 
   // Energy
   CalcEnergyRecommendation(S.materialID, bestScore.fEnergy, S.tPct).then(json => {
@@ -149,7 +180,9 @@ function showResults(result) {
 
   // Draw plots
   drawContourPlot(result.allScores, best, worst, result.isPartial);
-  drawPenetrationRose(result.penetrationRose, result.worstPenetrationRose, result.isPartial, null, null);
+  var bestProj = bestScore && bestScore.maxPerProjection;
+  var worstProj = worstScore && worstScore.maxPerProjection;
+  drawPenetrationRose(bestProj, worstProj, result.isPartial, null, null);
 
   // Enable tradeoff card (also unhide if previously hidden by removeMesh)
   $('card-tradeoff').style.display = '';
@@ -186,6 +219,7 @@ function renderIntelliScan(result) {
   html += '<div class="is-actions"><button class="is-btn" id="is-copy-btn">Copy angles</button><button class="is-btn" id="is-export-btn">Export JSON</button></div>';
   if (data.warning) html += '<div class="is-warning">\u2139 ' + data.warning + '</div>';
   html += '<div class="is-ref">Based on Butzhammer 2026 tangent-ray selection.</div>';
+  html += '<div class="is-info" style="margin-top:6px;padding:4px 6px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.15);border-radius:4px;font-size:9px;color:var(--text-dim);line-height:1.4">Tangent angles computed for parallel-beam geometry. For wide-angle cone-beam systems (SOD/SDD &lt; 0.6), consider verifying critical angles manually.</div>';
   body.innerHTML = html;
 
   var cb = document.getElementById('is-copy-btn');
@@ -292,13 +326,4 @@ export function setupPlotTabs() {
   });
 }
 
-// ── Ray Grid ──
-export function setupRayGrid() {
-  qsa('.ray-opt').forEach(el => {
-    el.addEventListener('click', () => {
-      qsa('.ray-opt').forEach(o => o.classList.remove('active'));
-      el.classList.add('active');
-      $('acc-ray-val').textContent = el.textContent;
-    });
-  });
-}
+

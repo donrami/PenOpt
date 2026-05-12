@@ -4,7 +4,7 @@ import { S, $, qsa, showError, setStatus } from './state.js';
 import { initScene, resizeViewport, resetCamera, switchViewMode, switchLayoutMode, createBeamVisualization, destroyBeamVisualization } from './scene.js';
 import { setupFileUpload, handlePickedMesh } from './filehandler.js';
 import { setupSliders, renderMatGrid, renderFilters, selectMaterial, recalcBeam, setupScannerPresets, setMatFilter } from './materials.js';
-import { setupRayGrid, setupAccordion, setupCardAccordion, setupTradeoff, setupExport, setupPlotTabs, runOptimization, cancelSearch } from './optimizer.js';
+import { setupAccordion, setupCardAccordion, setupTradeoff, setupExport, setupPlotTabs, runOptimization, cancelSearch } from './optimizer.js';
 import { GetMaterials, GetFilters, GetScannerPresets, PickAndLoadMesh } from '../wailsjs/go/main/App';
 
 // ── Keyboard shortcuts ──
@@ -49,7 +49,7 @@ async function init() {
     renderMatGrid(); renderFilters();
   } catch (err) { showError('Failed to load database: ' + err.message); }
 
-  setupFileUpload(); setupSliders(); setupAccordion(); setupCardAccordion(); setupRayGrid(); setupHelp(); setupKeyboard();
+  setupFileUpload(); setupSliders(); setupAccordion(); setupCardAccordion(); setupHelp(); setupKeyboard();
   setupScannerPresets(); setupTradeoff(); setupExport(); setupPlotTabs();
 
   // Material tabs

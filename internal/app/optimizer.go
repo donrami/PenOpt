@@ -42,7 +42,7 @@ func (opt *Optimizer) Run(ctx context.Context, req RunRequest) (string, error) {
 	coarseCfg.NumProjections = 36
 
 	go func() {
-		result, err := search.Run(bvhTree, coarseCfg, req.Weights, req.Method,
+		result, err := search.Run(bvhTree, m, coarseCfg, req.Weights, req.Method,
 			func(idx, total int, theta, phi float64) {
 				pct := float64(idx) / float64(total) * 100
 				runtime.EventsEmit(ctx, "search:progress", map[string]interface{}{
@@ -83,6 +83,7 @@ func (opt *Optimizer) Run(ctx context.Context, req RunRequest) (string, error) {
 func (opt *Optimizer) EvaluateSingle(theta, phi float64) (string, error) {
 	opt.loader.Lock()
 	bvhTree := opt.loader.CurrentBVH
+	m := opt.loader.CurrentMesh
 	opt.loader.Unlock()
 
 	if bvhTree == nil {
@@ -94,7 +95,7 @@ func (opt *Optimizer) EvaluateSingle(theta, phi float64) (string, error) {
 	cfg.RayGridY = 16
 	cfg.NumProjections = 90
 
-	score := search.EvaluateSingle(bvhTree, theta, phi, cfg)
+	score := search.EvaluateSingle(bvhTree, m, theta, phi, cfg)
 	data, err := json.Marshal(score)
 	if err != nil {
 		return "", fmt.Errorf("JSON marshal error: %w", err)

@@ -46,18 +46,19 @@ export function drawContourPlot(scores, best, worst, isPartial, targetCanvas) {
     return;
   }
 
-  // Separate coarse and fine score points
-  const coarseThetas = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170];
-  const coarsePhis = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200, 210, 220, 230, 240, 250, 260, 270, 280, 290, 300, 310, 320, 330, 340, 350];
-  const coarseSet = new Set();
-  for (const t of coarseThetas) for (const p of coarsePhis) coarseSet.add(t + ',' + p);
-
-  const coarsePts = scores.filter(s => coarseSet.has(s.theta + ',' + s.phi));
-  if (coarsePts.length < 4) {
+  // Use ALL evaluated angles as the interpolation grid (no hardcoded template)
+  // Build lookup map from all score points
+  const lookup = new Map();
+  for (const s of scores) lookup.set(s.theta + ',' + s.phi, s.score);
+  
+  const cuThetas = [...new Set(scores.map(s => s.theta))].sort((a, b) => a - b);
+  const cuPhis = [...new Set(scores.map(s => s.phi))].sort((a, b) => a - b);
+  
+  if (cuThetas.length < 2 || cuPhis.length < 2) {
     ctx.fillStyle = '#6b7280';
     ctx.font = 'bold 11px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('Insufficient coarse grid', w / 2, h / 2);
+    ctx.fillText('Not enough evaluated angles', w / 2, h / 2);
     return;
   }
 
@@ -86,12 +87,6 @@ export function drawContourPlot(scores, best, worst, isPartial, targetCanvas) {
   const tMin = Math.min(...thetasAll), tMax = Math.max(...thetasAll);
   const pMin = Math.min(...phisAll), pMax = Math.max(...phisAll);
   const tRange = tMax - tMin || 1, pRange = pMax - pMin || 1;
-
-  // Build bilinear interpolation lookup from coarse points
-  const lookup = new Map();
-  for (const s of coarsePts) lookup.set(s.theta + ',' + s.phi, s.score);
-  const cuThetas = [...new Set(coarsePts.map(s => s.theta))].sort((a, b) => a - b);
-  const cuPhis = [...new Set(coarsePts.map(s => s.phi))].sort((a, b) => a - b);
 
   function interpScore(theta, phi) {
     const tc = Math.min(tMax, Math.max(tMin, theta));
@@ -190,18 +185,20 @@ export function drawContourPlot(scores, best, worst, isPartial, targetCanvas) {
     ctx.fillText('worst', wx + 7, wy - 3);
   }
 
-  // Axis labels
+  // Axis labels (use actual evaluated angles)
   ctx.fillStyle = '#9ca3af';
   ctx.font = '10px sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'top';
-  for (const t of coarseThetas.filter((v, i, a) => a.indexOf(v) === i)) {
+  const thetas4labels = cuThetas.filter((v, i, a) => i === 0 || i === a.length - 1 || Math.abs(v - a[i-1]) > 8);
+  for (const t of thetas4labels) {
     const x = pad.l + ((t - tMin) / tRange) * pw;
     ctx.fillText(t + '\u00B0', x, h - 20);
   }
   ctx.textAlign = 'right';
   ctx.textBaseline = 'middle';
-  for (const p of coarsePhis.filter((v, i, a) => a.indexOf(v) === i)) {
+  const phis4labels = cuPhis.filter((v, i, a) => i === 0 || i === a.length - 1 || Math.abs(v - a[i-1]) > 8);
+  for (const p of phis4labels) {
     const y = pad.t + (1 - (p - pMin) / pRange) * ph;
     ctx.fillText(p + '\u00B0', pad.l - 5, y);
   }
@@ -341,6 +338,19 @@ export function drawPenetrationRose(bestData, worstData, isPartial, targetCanvas
   // Draw best (solid blue) on top
   drawRose(bestData, 'rgba(59,130,246,0.12)', '#3b82f6', 1.8, null);
 
+  // Resolution labels
+  const bestRes = bestData ? bestData.length : 0;
+  const worstRes = worstData ? worstData.length : 0;
+  
+  // Warn if resolutions differ
+  if (bestRes !== worstRes && bestRes > 0 && worstRes > 0) {
+    ctx.fillStyle = '#e8a838';
+    ctx.font = 'bold 8px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText('\u26A0 ' + bestRes + ' vs ' + worstRes + ' projections', cx, h - 48);
+  }
+
   // Legend
   const legY = h - 14;
   ctx.textAlign = 'left';
@@ -351,8 +361,8 @@ export function drawPenetrationRose(bestData, worstData, isPartial, targetCanvas
   ctx.fillRect(legX, legY - 3, 12, 2);
   ctx.fillStyle = '#c8ccd4';
   ctx.font = '7px sans-serif';
-  ctx.fillText('Optimal', legX + 16, legY);
-  legX += 60;
+  ctx.fillText('Optimal (' + bestRes + ' proj)', legX + 16, legY);
+  legX += 75;
 
   if (worstData && worstData !== bestData) {
     ctx.strokeStyle = 'rgba(239,68,68,0.5)';
@@ -364,8 +374,8 @@ export function drawPenetrationRose(bestData, worstData, isPartial, targetCanvas
     ctx.setLineDash([]);
     ctx.fillStyle = '#c8ccd4';
     ctx.font = '7px sans-serif';
-    ctx.fillText('Worst', legX + 16, legY);
-    legX += 60;
+    ctx.fillText('Worst (' + worstRes + ' proj)', legX + 16, legY);
+    legX += 75;
   }
 
   if (intelliScanAngles && intelliScanAngles.length > 0) {
