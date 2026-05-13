@@ -10,8 +10,6 @@ export function CalcEnergyRecommendation(arg1:string,arg2:number,arg3:number,arg
 
 export function ComputeFaceHeatmap(arg1:number,arg2:number):Promise<string>;
 
-export function EmitProgress(arg1:number,arg2:string):Promise<void>;
-
 export function EvaluateOrientation(arg1:number,arg2:number):Promise<string>;
 
 export function GetDefaultScannerConfig():Promise<raycaster.ScannerConfig>;

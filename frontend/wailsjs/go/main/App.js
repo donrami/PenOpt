@@ -14,10 +14,6 @@ export function ComputeFaceHeatmap(arg1, arg2) {
   return window['go']['main']['App']['ComputeFaceHeatmap'](arg1, arg2);
 }
 
-export function EmitProgress(arg1, arg2) {
-  return window['go']['main']['App']['EmitProgress'](arg1, arg2);
-}
-
 export function EvaluateOrientation(arg1, arg2) {
   return window['go']['main']['App']['EvaluateOrientation'](arg1, arg2);
 }
