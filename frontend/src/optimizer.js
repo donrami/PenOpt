@@ -1,5 +1,5 @@
 // Optimizer — search lifecycle, progress, results, IntelliScan, heatmap loading
-import { S, $, qsa, DEG, WEIGHT_PRESETS, showError, setStatus, invalidateResults, clearStaleResults } from './state.js';
+import { S, $, qsa, DEG, WEIGHT_PRESETS, TUBE_BIAS_BAND_KV, TUBE_COMFORT_MARGIN_KV, showError, setStatus, invalidateResults, clearStaleResults } from './state.js';
 import { applyHeatmap, animateRotation } from './scene.js';
 import { recalcBeam } from './materials.js';
 import { RunOptimization, ComputeFaceHeatmap, CalcEnergyRecommendation } from '../wailsjs/go/main/App';
@@ -7,6 +7,17 @@ import { drawContourPlot, drawPenetrationRose } from './plots.js';
 import { exportJSON, exportPNG } from './export.js';
 
 const runtime = window.runtime;
+
+// ── Energy Card Constants ──
+const KV_THRESHOLDS = {
+  LOW_MAX: 100,
+  MEDIUM_MAX: 300,
+  CEILING: 500,
+};
+const MARGIN_THRESHOLDS = {
+  LOW: 1.10,
+  AMPLE: 2.0,
+};
 
 // ── Optimization ──
 export function runOptimization() {
@@ -132,10 +143,15 @@ function clearResultsContent() {
   // Remove dynamically-created result elements
   var scoreGap = $('rs-score-gap'); if (scoreGap) scoreGap.remove();
   var tuyWarn = $('tuy-warning'); if (tuyWarn) tuyWarn.remove();
+  var savingsSub = $('energy-savings-sub'); if (savingsSub) savingsSub.remove();
 
   // Clear energy card
   var energyVal = $('energy-val'); if (energyVal) energyVal.textContent = '--';
   var energyQual = $('energy-qual'); if (energyQual) energyQual.innerHTML = '';
+  var energyTmin = $('energy-tmin'); if (energyTmin) energyTmin.textContent = '';
+  var energyMargin = $('energy-margin'); if (energyMargin) energyMargin.textContent = '';
+  var energyTubeStatus = $('energy-tube-status'); if (energyTubeStatus) { energyTubeStatus.textContent = ''; energyTubeStatus.style.color = ''; }
+  var energyTubeSub = $('energy-tube-status-sub'); if (energyTubeSub) energyTubeSub.remove();
   var energySavings = $('energy-savings'); if (energySavings) energySavings.textContent = '';
   var energyCaveat = $('energy-caveat'); if (energyCaveat) energyCaveat.textContent = '';
 
@@ -261,26 +277,150 @@ function showResults(result) {
     tuyWarn.style.display = 'none';
   }
 
-  // Energy
-  CalcEnergyRecommendation(S.materialID, bestScore.fEnergy, S.tPct).then(json => {
-    const rec = JSON.parse(json);
-    if (rec.error) return;
-    $('energy-val').textContent = rec.kv + ' kV';
-    $('rs-energy').textContent = rec.kv + ' kV';
-    // Qualitative label
-    let qual, color;
-    if (rec.kv < 100) { qual = '\u25B2 Higher kV recommended'; color = 'var(--amber-500)'; }
-    else if (rec.kv <= 200) { qual = 'Medium kV suitable'; color = 'var(--text)'; }
-    else { qual = '\u25BC Lower kV sufficient'; color = 'var(--green-500)'; }
-    $('energy-qual').innerHTML = `<span style="color:${color}">${qual}</span>`;
-    // Savings vs worst
-    var savingsTxt = '--';
-    if (worstScore.fEnergy && Math.abs(worstScore.fEnergy) > 1e-12) {
-      savingsTxt = ((1 - bestScore.fEnergy / worstScore.fEnergy) * 100).toFixed(0);
+  // ── Energy recommendation (best + worst) ──
+  var bestPeakPath = bestScore.fEnergy;
+  var worstPeakPath = worstScore.fEnergy;
+  Promise.all([
+    CalcEnergyRecommendation(S.materialID, bestPeakPath, S.tPct),
+    CalcEnergyRecommendation(S.materialID, worstPeakPath, S.tPct),
+  ]).then(function(jsons) {
+    var bestRec = JSON.parse(jsons[0]);
+    var worstRec = JSON.parse(jsons[1]);
+    if (bestRec.error) return;
+
+    // Best-kV display
+    $('energy-val').textContent = bestRec.kv + ' kV';
+    $('rs-energy').textContent = bestRec.kv + ' kV';
+
+    // ── A1: Qualitative label ──
+    var qual, color;
+    if (bestRec.kv === KV_THRESHOLDS.CEILING && bestRec.transmission < S.tPct / 100) {
+      qual = 'Exceeds recommended range — may require higher-energy system';
+      color = 'var(--red-500)';
+    } else if (bestRec.kv >= KV_THRESHOLDS.MEDIUM_MAX) {
+      qual = 'High kV — verify tube capability';
+      color = 'var(--amber-500)';
+    } else if (bestRec.kv >= KV_THRESHOLDS.LOW_MAX) {
+      qual = 'Medium kV range';
+      color = 'var(--text)';
+    } else {
+      qual = 'Low kV range';
+      color = 'var(--text)';
     }
-    $('energy-savings').textContent = '~' + savingsTxt + '% less energy than worst orientation';
-    $('energy-caveat').textContent = 'Qualitative estimate based on simplified spectrum model. Actual kV requirement depends on scanner hardware and tube spectrum characteristics.';
-  }).catch(() => {});
+    $('energy-qual').innerHTML = '<span style="color:' + color + '">' + qual + '</span>';
+
+    // ── A3: Tmin display ──
+    var tminEl = $('energy-tmin');
+    if (tminEl) tminEl.textContent = 'at Tmin = ' + S.tPct.toFixed(2) + '%';
+
+    // ── A4: Transmission margin ──
+    var marginEl = $('energy-margin');
+    if (marginEl) {
+      var marginRatio = bestRec.transmission / (S.tPct / 100);
+      var marginText, marginColor;
+      if (bestRec.transmission < S.tPct / 100) {
+        marginText = 'Transmission: ' + (bestRec.transmission * 100).toFixed(2) + '% — Below target, see warning';
+        marginColor = 'var(--red-500)';
+      } else if (marginRatio < MARGIN_THRESHOLDS.LOW) {
+        marginText = 'Transmission: ' + (bestRec.transmission * 100).toFixed(2) + '% — low margin';
+        marginColor = 'var(--amber-500)';
+      } else if (marginRatio >= MARGIN_THRESHOLDS.AMPLE) {
+        marginText = 'Transmission: ' + (bestRec.transmission * 100).toFixed(2) + '% — ample margin';
+        marginColor = 'var(--green-500)';
+      } else {
+        marginText = 'Transmission: ' + (bestRec.transmission * 100).toFixed(2) + '%';
+        marginColor = 'var(--text-dim)';
+      }
+      marginEl.textContent = marginText;
+      marginEl.style.color = marginColor;
+    }
+
+    // ── A1: Tube status (scanner power context) ──
+    var tubeStatusEl = $('energy-tube-status');
+    if (tubeStatusEl) {
+      var preset = S.presets.find(function(p) { return p.id === S.scannerPresetID; });
+      if (!preset || !preset.tube) {
+        tubeStatusEl.textContent = 'Tube specifications not configured for custom preset. Select a scanner preset or configure manually.';
+        tubeStatusEl.style.color = 'var(--text-muted)';
+      } else {
+        var maxKV = preset.tube.maxKV;
+        var dist = maxKV - bestRec.kv;
+        var msg, color;
+        if (bestRec.kv > maxKV) {
+          msg = bestRec.kv + ' kV exceeds tube limit of ' + maxKV + ' kV — scan not feasible on this hardware';
+          color = 'var(--red-500)';
+        } else if (dist <= TUBE_BIAS_BAND_KV) {
+          msg = bestRec.kv + ' kV near tube limit (max: ' + maxKV + ' kV) — verify with caution; spectrum model uncertainty of 10–30 kV may affect feasibility';
+          color = 'var(--amber-500)';
+        } else if (dist > TUBE_COMFORT_MARGIN_KV) {
+          msg = bestRec.kv + ' kV — comfortable margin (tube max: ' + maxKV + ' kV)';
+          color = 'var(--green-500)';
+        } else {
+          msg = bestRec.kv + ' kV within range (tube max: ' + maxKV + ' kV)';
+          color = 'var(--text-dim)';
+        }
+        tubeStatusEl.textContent = msg;
+        tubeStatusEl.style.color = color;
+
+        // ── A2: Medical CT caveat sub-line ──
+        var caveatEl = $('energy-tube-status-sub');
+        if (preset.tube.tubeType === 'medical') {
+          if (!caveatEl) {
+            caveatEl = document.createElement('div');
+            caveatEl.className = 'energy-tube-status-sub';
+            caveatEl.id = 'energy-tube-status-sub';
+            tubeStatusEl.parentNode.insertBefore(caveatEl, tubeStatusEl.nextSibling);
+          }
+          caveatEl.textContent = 'Medical CT scanner — not designed for industrial kV ranges above 140 kV. PenOpt\'s spectrum model (Boone 1997) is validated only to 140 kV. Check tube rating before use.';
+        } else if (caveatEl) {
+          caveatEl.remove();
+        }
+      }
+    }
+
+    // ── A2: Actual kV savings (not path-length savings) ──
+    if (worstRec.error) {
+      $('energy-savings').textContent = '—';
+    } else {
+      var savingsLabel;
+      var worstKV = worstRec.kv;
+      var bestKV = bestRec.kv;
+      var worstOK = !(worstKV === KV_THRESHOLDS.CEILING && worstRec.transmission < S.tPct / 100);
+      var bestOK  = !(bestKV  === KV_THRESHOLDS.CEILING && bestRec.transmission  < S.tPct / 100);
+
+      if (!worstOK && !bestOK) {
+        // Both at ceiling, neither meets Tmin
+        savingsLabel = 'Indeterminate — peak path exceeds penetrable range';
+      } else if (!worstOK) {
+        // Best OK, worst at ceiling: lower bound
+        var lowerBound = ((worstKV - bestKV) / worstKV * 100).toFixed(0);
+        savingsLabel = '\u2265' + lowerBound + '% less tube voltage vs worst orientation (rough estimate)';
+      } else if (worstKV === bestKV) {
+        savingsLabel = '0%';
+      } else {
+        var savingsPct = ((worstKV - bestKV) / worstKV * 100).toFixed(0);
+        savingsLabel = '~' + savingsPct + '% less tube voltage vs worst orientation (rough estimate)';
+      }
+      $('energy-savings').textContent = savingsLabel;
+    }
+
+    // Peak path sub-line (A2.7)
+    var peakPathLabel = 'Peak path: ' + bestPeakPath.toFixed(1) + ' mm (opt) vs ' + worstPeakPath.toFixed(1) + ' mm (worst)';
+    var subLine = $('energy-savings-sub');
+    if (!subLine) {
+      subLine = document.createElement('div');
+      subLine.id = 'energy-savings-sub';
+      subLine.style.cssText = 'font-size:10px;color:var(--text-muted);margin-top:2px';
+      var savingsEl = $('energy-savings');
+      if (savingsEl && savingsEl.parentNode) {
+        savingsEl.parentNode.insertBefore(subLine, savingsEl.nextSibling);
+      }
+    }
+    subLine.textContent = peakPathLabel;
+
+    // ── A6: Updated caveat text ──
+    $('energy-caveat').textContent = 'Rough estimate: simplified 120-point spectrum (no W K-characteristic lines, no self-filtration). Actual kV depends on scanner hardware and tube spectrum. K-edge-aware stepping requires a full spectrum model (planned).';
+  }).catch(function() {});
 
   // Smoothly rotate mesh to optimal orientation
   if (S.meshObject) {

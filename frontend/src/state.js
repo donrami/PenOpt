@@ -2,6 +2,8 @@
 
 // ── Constants ──
 export const DEG = Math.PI / 180;
+export const TUBE_BIAS_BAND_KV = 30;
+export const TUBE_COMFORT_MARGIN_KV = 60;
 export const WEIGHT_PRESETS = [
   // wBh = 0.0: fBh is a placeholder returning 0 for all orientations.
   // Weight redistributed to wTuy (both are artifact-related objectives).
@@ -31,6 +33,7 @@ export const S = {
   facePenMin: 0, facePenMax: 0,
   rayGridXY: 0,  // 0 = use defaults (8 coarse / 16 fine); override via slider
   searchRange: 45,  // degrees, 0 = default 45°
+  scannerPresetID: 'custom',
 };
 
 // ── Error / Status ──

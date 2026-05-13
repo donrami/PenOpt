@@ -152,6 +152,7 @@ export function setupScannerPresets() {
   sel.addEventListener('change', () => {
     const p = S.presets.find(x => x.id === sel.value);
     if (!p) return;
+    S.scannerPresetID = p.id;
     $('cfg-sdd').value = p.sdd; $('cfg-sod').value = p.sod;
     $('cfg-detw').value = p.detWidth; $('cfg-deth').value = p.detHeight;
     $('cfg-px').value = p.pixelsX; $('cfg-py').value = p.pixelsY;

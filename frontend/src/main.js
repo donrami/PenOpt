@@ -319,7 +319,7 @@ async function init() {
 
   setupTooltips();
   setupFileUpload(); setupSliders(); setupAccordion(); setupCardAccordion(); setupHelp(); setupKeyboard();
-  setupScannerPresets(); setupTradeoff(); setupExport(); setupPlotTabs();
+  setupScannerPresets(); S.scannerPresetID = $('scanner-preset')?.value || 'custom'; setupTradeoff(); setupExport(); setupPlotTabs();
   setupScannerValidation();
 
   // Material tabs
