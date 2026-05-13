@@ -1278,12 +1278,6 @@ textarea:focus-visible {
 .tradeoff-stop.active { border-color: var(--accent); background: var(--accent-tint); color: var(--accent); }
 .tradeoff-stop:hover:not(.active) { border-color: var(--accent); }
 
-.tradeoff-status { display: none; font-size: 10px; color: var(--text-muted); margin-bottom: var(--sp-2); font-style: italic; }
-#card-tradeoff.tradeoff-disabled .tradeoff-status { display: block; }
-#card-tradeoff.tradeoff-disabled .tradeoff-stops,
-#card-tradeoff.tradeoff-disabled .method-row,
-
-
 .method-row { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-2); }
 .method-label { font-size: 10px; color: var(--text-dim); }
 .method-btn {

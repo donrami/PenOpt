@@ -170,12 +170,9 @@ function clearResultsContent() {
   var isCard = $('card-intelliscan'); if (isCard) isCard.style.display = 'none';
 
   // Reset tradeoff card to disabled state
+  // Reset tradeoff stops to the first preset
   var tradeoffCard = $('card-tradeoff');
   if (tradeoffCard) {
-    tradeoffCard.classList.add('tradeoff-disabled');
-    var tradeoffStatus = $('tradeoff-status');
-    if (tradeoffStatus) tradeoffStatus.style.display = 'block';
-    // Deactivate all tradeoff stops except the first
     var stops = tradeoffCard.querySelectorAll('.tradeoff-stop');
     stops.forEach(function(s, i) { s.classList.toggle('active', i === 0); });
   }
@@ -454,7 +451,6 @@ function showResults(result) {
 
   // Enable tradeoff card (also unhide if previously hidden by removeMesh)
   $('card-tradeoff').style.display = '';
-  $('card-tradeoff').classList.remove('tradeoff-disabled');
 
   // Results visible
   S.facePenetrations = null;
