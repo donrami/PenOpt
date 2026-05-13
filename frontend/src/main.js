@@ -56,6 +56,23 @@
   }
 })();
 
+// ── Animated Modal Helpers ──
+function animateModalOpen(el) {
+  el.classList.remove('modal-closing', 'hidden');
+  // Force reflow so the animation plays
+  void el.offsetWidth;
+}
+
+function animateModalClose(el) {
+  if (el.classList.contains('hidden')) return;
+  el.classList.add('modal-closing');
+  el.addEventListener('animationend', function onEnd() {
+    el.removeEventListener('animationend', onEnd);
+    el.classList.add('hidden');
+    el.classList.remove('modal-closing');
+  });
+}
+
 // Bootstrap — initializes all modules and sets up keyboard shortcuts
 import './style.css';
 import { S, $, qsa, showError, setStatus, setOptimizeBtnState } from './state.js';
@@ -70,7 +87,14 @@ function setupKeyboard() {
   document.addEventListener('keydown', e => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
     switch (e.key) {
-      case 'Escape': $('error-banner').classList.add('hidden'); $('help-overlay').classList.add('hidden'); break;
+      case 'Escape':
+        $('error-banner').classList.add('hidden');
+        if (window.__prevFocusOnError && window.__prevFocusOnError !== document.body && document.body.contains(window.__prevFocusOnError)) {
+          window.__prevFocusOnError.focus();
+        }
+        window.__prevFocusOnError = null;
+        animateModalClose($('help-overlay'));
+        break;
       case 'o': if (e.ctrlKey) { e.preventDefault(); PickAndLoadMesh().then(info => { if (info) handlePickedMesh(info); }).catch(err => showError('File picker error: ' + err)); } break;
       case 'Enter': if (e.ctrlKey) { e.preventDefault(); if (!($('btn-optimize')?.disabled ?? true) && !($('btn-optimize-sidebar')?.disabled ?? true)) runOptimization(); } break;
       case 'f': case 'F': toggleFullscreen(); break;
@@ -88,12 +112,20 @@ function toggleFullscreen() {
 }
 
 function setupHelp() {
-  $('btn-help').addEventListener('click', () => $('help-overlay').classList.remove('hidden'));
-  $('btn-help-close').addEventListener('click', () => $('help-overlay').classList.add('hidden'));
-  $('help-overlay').addEventListener('click', e => { if (e.target === $('help-overlay')) $('help-overlay').classList.add('hidden'); });
+  $('btn-help').addEventListener('click', () => animateModalOpen($('help-overlay')));
+  $('btn-help-close').addEventListener('click', () => animateModalClose($('help-overlay')));
+  $('help-overlay').addEventListener('click', e => { if (e.target === $('help-overlay')) animateModalClose($('help-overlay')); });
 }
 
-$('btn-error-dismiss').addEventListener('click', () => $('error-banner').classList.add('hidden'));
+$('btn-error-dismiss').addEventListener('click', function() {
+  var banner = $('error-banner');
+  banner.classList.add('hidden');
+  // Restore focus to previously focused element
+  if (window.__prevFocusOnError && window.__prevFocusOnError !== document.body && document.body.contains(window.__prevFocusOnError)) {
+    window.__prevFocusOnError.focus();
+  }
+  window.__prevFocusOnError = null;
+});
 
 // ── Bootstrap ──
 function setupTooltips() {

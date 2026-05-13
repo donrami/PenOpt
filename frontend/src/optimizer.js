@@ -131,9 +131,9 @@ function showResults(result) {
   }
   const fmtlDelta = pctDelta(bestScore.fMtl, worstScore.fMtl);
   const fenergyDelta = pctDelta(bestScore.fEnergy, worstScore.fEnergy);
-  $('rs-fmtl').textContent = fmtlDelta !== null ? Math.abs(fmtlDelta).toFixed(1) + '% better' : '--';
+  $('rs-fmtl').textContent = fmtlDelta !== null ? (fmtlDelta < 0 ? '\u2193 ' : '\u2191 ') + Math.abs(fmtlDelta).toFixed(1) + '%' : '--';
   $('rs-fmtl').style.color = fmtlDelta !== null && fmtlDelta < 0 ? 'var(--green-500)' : 'var(--text)';
-  $('rs-fenergy').textContent = fenergyDelta !== null ? Math.abs(fenergyDelta).toFixed(1) + '% better' : '--';
+  $('rs-fenergy').textContent = fenergyDelta !== null ? (fenergyDelta < 0 ? '\u2193 ' : '\u2191 ') + Math.abs(fenergyDelta).toFixed(1) + '%' : '--';
   $('rs-fenergy').style.color = fenergyDelta !== null && fenergyDelta < 0 ? 'var(--green-500)' : 'var(--text)';
   var totalEval = result.allScores.length;
   var coarseEval = result.numCoarseEval || 0;
@@ -185,10 +185,10 @@ function showResults(result) {
   var pctTuy = (bestScore.fTuy !== undefined && worstScore.fTuy !== undefined) ? ((bestScore.fTuy - worstScore.fTuy) * 100 / (worstScore.fTuy || 1)).toFixed(1) + '%' : '--';
 
   const rows = [
-    ['f_mtl', worstScore.fMtl.toFixed(3), bestScore.fMtl.toFixed(3), pct(bestScore.fMtl, worstScore.fMtl), (bestScore.fMtl - worstScore.fMtl)],
-    ['f_energy', worstScore.fEnergy.toFixed(1) + ' mm', bestScore.fEnergy.toFixed(1) + ' mm', pct(bestScore.fEnergy, worstScore.fEnergy), (bestScore.fEnergy - worstScore.fEnergy)],
-    ['f_hdn', worstScore.fHdn.toFixed(3), bestScore.fHdn.toFixed(3), pct(bestScore.fHdn, worstScore.fHdn), (bestScore.fHdn - worstScore.fHdn)],
-    ['f_tuy', fTuyWorst, fTuyBest, pctTuy, (bestScore.fTuy - worstScore.fTuy)],
+    ['Mean Pen.', worstScore.fMtl.toFixed(3), bestScore.fMtl.toFixed(3), pct(bestScore.fMtl, worstScore.fMtl), (bestScore.fMtl - worstScore.fMtl)],
+    ['Peak Path', worstScore.fEnergy.toFixed(1) + ' mm', bestScore.fEnergy.toFixed(1) + ' mm', pct(bestScore.fEnergy, worstScore.fEnergy), (bestScore.fEnergy - worstScore.fEnergy)],
+    ['Range', worstScore.fHdn.toFixed(3), bestScore.fHdn.toFixed(3), pct(bestScore.fHdn, worstScore.fHdn), (bestScore.fHdn - worstScore.fHdn)],
+    ['Completeness', fTuyWorst, fTuyBest, pctTuy, (bestScore.fTuy - worstScore.fTuy)],
   ];
   $('opt-table-body').innerHTML = rows.map(r =>
     `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td ${style(r[4])}>${r[3]}</td></tr>`
@@ -201,7 +201,7 @@ function showResults(result) {
     if (!tuyWarn) {
       tuyWarn = document.createElement('div');
       tuyWarn.id = 'tuy-warning';
-      tuyWarn.style.cssText = 'margin-top:8px;padding:6px 8px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);border-radius:4px;font-size:10px;color:var(--amber-500);display:flex;align-items:center;gap:6px';
+      tuyWarn.style.cssText = 'margin-top:8px;padding:6px 8px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);border-radius:4px;font-size:11px;color:var(--amber-500);display:flex;align-items:center;gap:6px';
       $('opt-angles').parentElement.appendChild(tuyWarn);
     }
     tuyWarn.innerHTML = '\u26A0 Only ' + tuyPct + '% of faces satisfy Tuy-Smith condition — cone-beam artifacts may occur';

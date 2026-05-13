@@ -34,7 +34,16 @@ export const S = {
 };
 
 // ── Error / Status ──
-export function showError(msg) { $('error-text').textContent = msg; $('error-banner').classList.remove('hidden'); }
+export function showError(msg) {
+  var banner = $('error-banner');
+  var textEl = $('error-text');
+  textEl.textContent = msg;
+  banner.classList.remove('hidden');
+  // Store focus and move to the error banner for accessibility
+  window.__prevFocusOnError = document.activeElement;
+  banner.setAttribute('tabindex', '-1');
+  banner.focus();
+}
 export function setStatus(msg) { $('status-text').textContent = msg; }
 
 // T3.3: format milliseconds into human-readable time string
@@ -57,8 +66,17 @@ export function showConfirm(message) {
 
     textEl.textContent = message;
 
+    function closeOverlay() {
+      overlay.classList.add('modal-closing');
+      overlay.addEventListener('animationend', function onEnd() {
+        overlay.removeEventListener('animationend', onEnd);
+        overlay.classList.add('hidden');
+        overlay.classList.remove('modal-closing');
+      });
+    }
+
     function cleanup(result) {
-      overlay.classList.add('hidden');
+      closeOverlay();
       cancelBtn.removeEventListener('click', onCancel);
       okBtn.removeEventListener('click', onOk);
       document.removeEventListener('keydown', onKey);
@@ -91,7 +109,7 @@ export function showConfirm(message) {
     document.addEventListener('keydown', onKey);
     overlay.addEventListener('click', onOverlayClick);
 
-    overlay.classList.remove('hidden');
+    overlay.classList.remove('modal-closing', 'hidden');
     cancelBtn.focus();
   });
 }

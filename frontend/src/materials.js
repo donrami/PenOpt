@@ -1,4 +1,5 @@
 // Materials — material picker, filter picker, beam energy
+import { debounce } from './helpers.js';
 import { S, $, qs, qsa, invalidateResults } from './state.js';
 import { CalcBeamParams, GetMaterials, GetFilters, GetScannerPresets } from '../wailsjs/go/main/App';
 
@@ -71,19 +72,9 @@ export function selectFilter(id) {
   invalidateResults();
 }
 
-function _debounce(fn, ms) {
-  var timer = null;
-  return function() {
-    var args = arguments;
-    var ctx = this;
-    if (timer) clearTimeout(timer);
-    timer = setTimeout(function() { timer = null; fn.apply(ctx, args); }, ms);
-  };
-}
-
 export function setupSliders() {
   const eSl = $('sl-energy');
-  var onEnergyChange = _debounce(function() { recalcBeam(); invalidateResults(); }, 80);
+  var onEnergyChange = debounce(function() { recalcBeam(); invalidateResults(); }, 80);
   eSl.addEventListener('input', () => { S.energy = parseFloat(eSl.value); onEnergyChange(); });
   [30, 50, 76, 100, 150, 200, 300].forEach(v => {
     const btn = document.createElement('button');
@@ -91,7 +82,7 @@ export function setupSliders() {
     $('presets-energy').appendChild(btn);
   });
   const tSl = $('sl-tmin');
-  var onTminChange = _debounce(function() { recalcBeam(); invalidateResults(); }, 80);
+  var onTminChange = debounce(function() { recalcBeam(); invalidateResults(); }, 80);
   tSl.addEventListener('input', () => { S.tPct = parseFloat(tSl.value); onTminChange(); });
   [0.01, 0.05, 0.10, 0.20, 0.50, 1.0, 2.0].forEach(v => {
     const btn = document.createElement('button');

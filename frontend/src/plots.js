@@ -2,12 +2,14 @@
 // Ported from the old project: contour.js, rose.js, display.js
 
 // setupCanvas configures a canvas element for HiDPI rendering.
+// Returns dimensions plus a resize callback to re-render on container changes.
 export function setupCanvas(canvasId, defaultWidth, defaultHeight, targetCanvas) {
   const cv = targetCanvas || document.getElementById(canvasId);
   if (!cv) return { cv: null, ctx: null, w: 0, h: 0 };
   const dpr = window.devicePixelRatio || 1;
-  const rect = cv.parentElement.getBoundingClientRect();
-  const w = Math.max(rect.width - 4, defaultWidth);
+  const parent = cv.parentElement;
+  const rect = parent.getBoundingClientRect();
+  const w = Math.max(rect.width - 4, Math.min(defaultWidth, 200));
   const h = Math.max(defaultHeight, 100);
   cv.width = w * dpr;
   cv.height = h * dpr;
@@ -15,7 +17,7 @@ export function setupCanvas(canvasId, defaultWidth, defaultHeight, targetCanvas)
   cv.style.height = h + 'px';
   const ctx = cv.getContext('2d');
   ctx.scale(dpr, dpr);
-  return { cv, ctx, w, h };
+  return { cv, ctx, w, h, parent };
 }
 
 // ── Contour Plot ──
@@ -163,8 +165,8 @@ export function drawContourPlot(scores, best, worst, isPartial, targetCanvas, re
     ctx.textAlign = 'left';
     ctx.textBaseline = 'bottom';
     ctx.fillText(best.score.toFixed(3), bx + 9, by - 2);
-    ctx.font = '9px sans-serif';
     ctx.fillStyle = '#9ca3af';
+    ctx.font = '10px sans-serif';
     ctx.fillText('best', bx + 9, by + 10);
   }
 
@@ -180,7 +182,7 @@ export function drawContourPlot(scores, best, worst, isPartial, targetCanvas, re
     ctx.moveTo(wx + s, wy - s); ctx.lineTo(wx - s, wy + s);
     ctx.stroke();
     ctx.fillStyle = 'rgba(255,255,255,0.7)';
-    ctx.font = '9px sans-serif';
+    ctx.font = '10px sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
     ctx.fillText('worst', wx + 7, wy - 3);
@@ -253,7 +255,7 @@ export function drawContourPlot(scores, best, worst, isPartial, targetCanvas, re
 
   if (isPartial) {
     ctx.fillStyle = '#e8a838';
-    ctx.font = 'bold 9px sans-serif';
+    ctx.font = 'bold 10px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     ctx.fillText('\u26A0 Partial results', w / 2, 1);
@@ -279,7 +281,7 @@ export function drawPenetrationRose(bestData, worstData, isPartial, targetCanvas
     ctx.font = 'bold 11px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('No penetration data', cx, cy);
-    ctx.font = '9px sans-serif';
+    ctx.font = '10px sans-serif';
     ctx.fillStyle = '#4b5563';
     ctx.fillText('Run optimization to generate', cx, cy + 16);
     return;
@@ -294,7 +296,7 @@ export function drawPenetrationRose(bestData, worstData, isPartial, targetCanvas
   ctx.strokeStyle = '#272b35';
   ctx.lineWidth = 0.5;
   ctx.fillStyle = '#6b7280';
-  ctx.font = '7px sans-serif';
+  ctx.font = '10px sans-serif';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
   for (let pct = 0.25; pct <= 1; pct += 0.25) {
@@ -318,7 +320,7 @@ export function drawPenetrationRose(bestData, worstData, isPartial, targetCanvas
     const lx = cx + Math.cos(rad) * labelOffset;
     const ly = cy + Math.sin(rad) * labelOffset;
     ctx.fillStyle = '#6b7280';
-    ctx.font = '7px sans-serif';
+    ctx.font = '10px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     const shifts = {
@@ -380,7 +382,7 @@ export function drawPenetrationRose(bestData, worstData, isPartial, targetCanvas
   // Warn if resolutions differ
   if (bestRes !== worstRes && bestRes > 0 && worstRes > 0) {
     ctx.fillStyle = '#e8a838';
-    ctx.font = 'bold 8px sans-serif';
+    ctx.font = 'bold 10px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'bottom';
     ctx.fillText('\u26A0 ' + bestRes + ' vs ' + worstRes + ' projections', cx, h - 48);
@@ -395,7 +397,7 @@ export function drawPenetrationRose(bestData, worstData, isPartial, targetCanvas
   ctx.fillStyle = '#3b82f6';
   ctx.fillRect(legX, legY - 3, 12, 2);
   ctx.fillStyle = '#c8ccd4';
-  ctx.font = '7px sans-serif';
+  ctx.font = '10px sans-serif';
   ctx.fillText('Optimal (' + bestRes + ' proj)', legX + 16, legY);
   legX += 75;
 
@@ -408,7 +410,7 @@ export function drawPenetrationRose(bestData, worstData, isPartial, targetCanvas
     ctx.stroke();
     ctx.setLineDash([]);
     ctx.fillStyle = '#c8ccd4';
-    ctx.font = '7px sans-serif';
+    ctx.font = '10px sans-serif';
     ctx.fillText('Worst (' + worstRes + ' proj)', legX + 16, legY);
     legX += 75;
   }
@@ -420,13 +422,13 @@ export function drawPenetrationRose(bestData, worstData, isPartial, targetCanvas
     ctx.moveTo(legX, legY); ctx.lineTo(legX + 12, legY);
     ctx.stroke();
     ctx.fillStyle = '#c8ccd4';
-    ctx.font = '7px sans-serif';
+    ctx.font = '10px sans-serif';
     ctx.fillText('IntelliScan (' + intelliScanAngles.length + ')', legX + 16, legY);
   }
 
   if (isPartial) {
     ctx.fillStyle = '#e8a838';
-    ctx.font = 'bold 9px sans-serif';
+    ctx.font = 'bold 10px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('\u26A0 Partial result', cx, 12);
