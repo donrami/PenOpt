@@ -51,6 +51,14 @@ This matches PenOpt's `theta` and `phi` convention exactly.
 
 ## Deviations from Paper
 
+### Grid Step Size
+
+PenOpt uses 15° coarse intervals vs. the paper's 10°. This reduces coarse evaluations from 100 to 49 (for ±45° range). The deviation is a deliberate speed/accuracy trade-off:
+
+- **Benefit**: 51% fewer ray-casting evaluations, ~2× faster search
+- **Risk**: The coarser grid may miss the global optimum if it falls between coarse points. The ±5°/1° refinement around top-3 candidates compensates for most of this risk.
+- **Validation**: No systematic study has compared 10° vs 15° success rates on standard test geometries.
+
 - PenOpt uses a simpler BVH approach (median-split, no SAH) vs. the paper's unspecified acceleration structure
 - PenOpt combines the three objectives as a weighted sum or minimax; the paper uses multiobjective optimization with Pareto front analysis (conceptual difference — the code comment references the paper's approach)
 - The jig construction component is partially implemented: a simplified box-pocket + base plate (jig.go), not the paper's conforming support pocket. STL export is working.

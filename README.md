@@ -190,9 +190,17 @@ Contributions are welcome. Please open an issue to discuss changes before submit
 
 ## Acknowledgments
 
-- Möller-Trumbore algorithm for ray-triangle intersection
-- NIST XCOM for material attenuation data
-- Wails team for the Go + web frontend integration framework
+- **Möller-Trumbore algorithm** (Möller & Trumbore 1997) for ray-triangle intersection
+- **NIST XCOM** (Berger et al., NISTIR 6537) for photon cross-section material data
+- **Ito et al. (2020)** — orientation optimization framework using ray casting
+- **Heinzl et al. (2011)** — ray casting methodology for CT specimen placement
+- **Butzhammer et al. (2026)** — automated tangent-ray projection selection (IntelliScan)
+- **Lifton & Poon (2023)** — IntelliScan adaptive projection allocation
+- **Tucker et al. (1991) / Boone & Seibert (1997)** — tungsten anode X-ray spectrum models
+- **Deb et al. (2002)** — NSGA-II multiobjective optimization (planned)
+- **Wails team** for the Go + web frontend integration framework
+- **Three.js** (r170) for 3D viewport rendering
+- **fogleman/simplify** — quadric error metric mesh simplification (Garland & Heckbert 1997)
 
 ## License
 

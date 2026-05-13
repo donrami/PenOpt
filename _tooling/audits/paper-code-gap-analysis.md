@@ -10,9 +10,10 @@
 
 | Severity | Count | Description |
 |----------|-------|-------------|
-| **GAP** | 6 | Implementation deviates from paper methods in documented and undocumented ways |
-| **PLACEHOLDER** | 3 | Objective functions that exist as stubs but return 0 / pass-through |
-| **WARNING** | 2 | Physics model is significantly simplified vs. cited methods |
+| **GAP** | 9 | Implementation deviates from paper methods in documented and undocumented ways |
+| **PLACEHOLDER** | 2 | Objective functions that exist as stubs but return 0 / pass-through |
+| **WARNING** | 5 | Physics model is significantly simplified vs. cited methods |
+| **FRONTEND** | 5 | UI implications of science gaps — presets misrepresent what's optimized, thresholds inconsistent |
 | **COVERAGE** | 4 | Missing tests / validation against known reference values |
 
 ## GAP: Implementation Deviations from Papers
@@ -68,12 +69,20 @@ And the calling code in search.go never applies `1 - tuy` inversion, so fTuy eve
 
 **Impact**: Tuy-Smith is a critical condition for cone-beam CT — without it as a true objective, the optimal orientation may have poor cone-beam reconstruction quality that the user isn't warned about beyond a generic <90% flag.
 
-### G4. Ito 2020 — Coarse→fine normalization is global, paper is batch-local
+### G4a. Ito 2020 — Coarse→fine normalization is global, paper is batch-local
 
 **Paper**: Normalization is per-batch (coarse scores normalized independently, top candidates identified from coarse-normalized scores, then fine scores refined).  
 **Code**: Coarse-only normalization used for top-3 selection (`globalScoreAndNormalize` applied to coarse results only), then **all** coarse + fine results are globally normalized together for the final ranking. The docstring says this avoids "batch-local bias."
 
-**Impact**: This is arguably an *improvement* over the paper — global normalization is more correct. But it means coarse candidates that had poor coarse scores but improve dramatically with finer ray grids won't be discovered since top-3 selection is still coarse-only.
+**Impact**: This is arguably an *improvement* over the paper — global normalization is more correct.
+
+### G4b. Coarse/fine ray grid resolution mismatch
+
+**Code**: Coarse evaluations use 8×8 ray grid with 36 projections. Fine evaluations use 16×16 ray grid (2×) with 90 projections (2.5×).
+
+**Problem**: Top-3 candidates are selected using coarse-resolution scores, but the final ranking combines coarse and fine scores under global normalization. An orientation that scores well at 8×8/36 projections may score poorly at 16×16/90 projections, and vice versa. The coarse-only top-3 selection may systematically miss orientations that perform better at higher resolution.
+
+**Impact**: Combined with the global normalization across resolutions, a coarse-evaluated orientation and a fine-evaluated orientation at similar true quality can have artificially different normalized scores, distorting the ranking.
 
 ### G5. Heinzl 2011 — CPU-based ray casting, not GPU
 
@@ -91,6 +100,103 @@ And the calling code in search.go never applies `1 - tuy` inversion, so fTuy eve
 
 **Impact**: Another phantom checkbox. Method B is not implemented.
 
+### G7. FTuy inverted — optimizes for worse Tuy-Smith completeness
+
+**File**: `objectives.go` lines 67-76
+
+```go
+func FTuy(values []float64) []float64 {
+    return values  // no inversion, no transformation
+}
+```
+
+**Problem**: The scoring system minimizes scores, but fTuy is "higher is better." The docstring says the caller should use `(1 - tuy)` to invert, but no caller does. Since all 5 weights now transmit from the frontend (B3 fixed), every weight preset allocates non-zero wTuy:
+- Quality: wTuy = 0.05
+- Balanced: wTuy = 0.10
+- Energy: wTuy = 0.05
+
+**5-10% of the optimization signal actively prefers orientations with worse Tuy-Smith completeness.** This is not a harmless placeholder — it produces systematically wrong ranking.
+
+**Concrete fix**:
+```go
+func FTuy(values []float64) []float64 {
+    result := make([]float64, len(values))
+    for i, v := range values {
+        result[i] = 1.0 - v
+    }
+    return result
+}
+```
+
+### G8. Fine search angle-wrapping can evaluate irrelevant orientations
+
+**File**: `internal/search/search.go` lines 236-239
+
+When the fine search generates candidates within ±5° of a top-3 coarse candidate, the code wraps angles:
+```go
+if t < 0 { t += 180 }
+if t >= 180 { t -= 180 }
+if p < 0 { p += 360 }
+if p >= 360 { p -= 360 }
+```
+
+The theta wrapping (mod 180) is correct for symmetry. But phi wrapping (mod 360) means candidates **at the edge of the search range** (±75° max) may wrap to orientations 180° away from the original candidate — far outside the ±5° refinement neighborhood. This wastes evaluations on orientations that may be irrelevant to the refinement.
+
+**Impact**: Small efficiency loss. Correct handling would clamp to the search range rather than wrapping.
+
+### G9. No handling for small parts where the ray grid undersamples the mesh
+
+**Files**: `internal/raycaster/raycaster.go`, `internal/search/search.go`, `internal/objectives/objectives.go`
+
+**Problem**: The ray grid is a fixed number of rays (default 8×8 coarse, 16×16 fine) evenly spaced across the full detector area. A small part whose projected area is smaller than the inter-ray spacing will be **missed entirely or severely undersampled** by most or all rays.
+
+**Concrete scenario**: A 5mm part on a 400×400mm detector with a 16×16 ray grid:
+- Each ray covers a 25×25mm cell of detector space
+- The part's projection covers ~5×5mm — less than 5% of a single cell
+- At most 1-2 rays out of 256 intersect the part
+- The remaining 254 rays report 0mm penetration
+
+**Failure modes**:
+
+1. **fMtl dilution** (objectives.go lines 19-27): The cube-root mean divides by total ray count (including zeros). For 2 hits at 10mm out of 256 rays:
+   ```
+   sum = 2 × 1000 = 2000
+   mean = 2000/256 ≈ 7.8
+   cbrt ≈ 1.98 mm
+   ```
+   The reported penetration (~2mm) is 5× smaller than the true max penetration (10mm). The orientation appears artificially good.
+
+2. **False zero fHdn**: If no projection happens to intersect the part, `maxPerProjection` is all zeros, fHdn = 0, and that orientation scores perfectly for this objective.
+
+3. **Random optimum when all orientations score near-zero**: If no orientation has meaningful ray intersections, all fMtl values are near-zero → normalization produces all zeros → every orientation gets the same score → the first one is returned as "best." The result is effectively random.
+
+4. **Granularity starvation step function**: At fine grids, the difference between "one ray grazes the part" and "zero rays hit" becomes a step function, producing a non-smooth objective landscape that the coarse→fine search cannot navigate reliably.
+
+**No guard exists**: There is no check anywhere in the pipeline for:
+- Fraction of rays that intersected the mesh
+- Whether the part's projected area exceeds the inter-ray spacing
+- A minimum hit-count threshold below which results are flagged as unreliable
+
+The ray sampling slider goes down to 4×4 (16 rays total), making the problem worse at low settings.
+
+**Scales affected**:
+| Detector size | Part size | Ray grid | Inter-ray distance | Rays hitting part | Reliability |
+|---|---|---|---|---|---|
+| 400mm | 200mm | 8×8 | 50mm | ~16 | ✅ Good |
+| 400mm | 50mm | 8×8 | 50mm | ~1-4 | ⚠️ Marginal |
+| 400mm | 10mm | 8×8 | 50mm | 0-1 | ❌ Unreliable |
+| 400mm | 10mm | 32×32 | 12.5mm | ~1-2 | ⚠️ Marginal |
+
+**What the papers don't say**: Neither Ito 2020 nor Heinzl 2011 explicitly addresses the small-part regime. Both assume the part fills a reasonable fraction of the detector. This is a blind spot in the literature as applied.
+
+**Possible mitigations** (not implemented):
+1. Automatic ray grid density adjustment based on part bounding box vs. detector size
+2. A "coverage fraction" metric reported alongside objectives (fraction of rays with non-zero penetration)
+3. A warning when the average non-zero ray count per projection falls below a threshold (e.g., < 10%)
+4. Per-face heatmap-based adaptive sampling that concentrates rays on the projected silhouette
+
+**Impact**: For small parts (common in industrial CT — watch components, MEMS, small medical devices), the optimization results are unreliable without the user manually selecting a dense enough ray grid. The UI gives no feedback on sampling adequacy.
+
 ---
 
 ## PLACEHOLDER: Stub Objective Functions
@@ -107,26 +213,14 @@ var fBh float64
 
 The function `FBh()` in objectives.go is a pass-through that returns input unchanged. The beam-hardening objective is entirely non-functional. The weight presets allocate `wBh: 0.05` or `0.1`, but since `fBh` is always 0, this weight slot is wasted.
 
-### P2. FTuy — pass-through, never inverted for minimization
-
-**File**: `objectives.go` lines 67-76
-
-```go
-func FTuy(values []float64) []float64 {
-    return values  // no inversion, no transformation
-}
-```
-
-The docstring says "caller should use (1 - tuy) if they want to minimize" but no caller does this. Since the scoring system minimizes scores, and fTuy is "higher is better," the objective would need to be inverted to work correctly. (This was masked at launch because the frontend only sent 3 weights — now 5 are transmitted, so FTuy's inverted direction is an active bug.)
-
-### P3. f_uncertainty (Grozmani) — referenced but not implemented
+### P2. f_uncertainty (Grozmani) — referenced but not implemented
 
 **Research note**: Lists `f_uncertainty` as a PenOpt objective in the objectives package.  
 **Code**: No `f_uncertainty` function exists anywhere. The comment in objectives.go line 4 lists "uncertainty" as an unimplemented additional objective that "require[s] per-face or per-projection data not collected by the sparse ray grid."
 
 ---
 
-## WARNING: Physics Simplifications
+## WARNING: Physics Simplifications & Hardware Assumptions
 
 ### W1. Tucker/Boone spectrum — simplified continuum model
 
@@ -169,6 +263,20 @@ The code claims that for both parallel-beam and cone-beam geometries:
 
 **Impact**: For wide-angle systems (dental CBCT, large-area detectors), the computed IntelliScan angles may be suboptimal. The cone-beam warning message thresholds (SOD/SDD < 0.7) deserve tighter validation.
 
+**Stronger claim**: The code uses parallel-beam physics **unconditionally**. The `GeometryMode` field is purely cosmetic — the formula never changes regardless of the mode selected. The cone-beam equation shown in the docstring only simplifies to the same `atan2(nx, nz)` under the assumption that the source is at infinity (i.e., all rays are parallel). For any real cone-beam system at finite SOD, the ray direction varies across the detector by the cone half-angle.
+
+### W5. BVH early-exit can miss intersections for non-watertight meshes
+
+**File**: `internal/bvh/bvh.go` line 157
+
+```go
+if tFar < 0 { return }
+```
+
+**Problem**: The ray-AABB intersection's `tFar < 0` early-exit is correct when the ray origin is outside the mesh. But for non-watertight meshes (which PenOpt warns about but accepts), a ray origin can be **inside** the mesh volume. In that case `tFar < 0` can occur when the AABB is entirely behind the ray, causing valid intersections to be silently skipped.
+
+**Impact**: For non-watertight meshes, penetration lengths can be silently underestimated. The watertight warning is shown to the user, but the severity of the resulting error is not communicated.
+
 ---
 
 ## COVERAGE: Missing Tests
@@ -207,11 +315,65 @@ The existing search tests check that functions run without error, but never vali
 
 ### T4. No end-to-end tests
 
-There are no tests that exercise the frontend→backend→frontend round trip. The JSON serialization/deserialization path is untested, meaning bugs like B3 (wrong weights array length) can go undetected until runtime.
+There are no tests that exercise the frontend→backend→frontend round trip. The JSON serialization/deserialization path is untested, meaning API contract mismatches of this kind can go undetected until runtime.
 
 ---
 
-## MINOR: Documentation vs. Reality Discrepancies
+## FRONTEND: UI Implications of Science Gaps
+
+### F1. Weight presets misrepresent what's actually optimized
+
+**File**: `frontend/src/state.js` lines 6-8, `frontend/src/optimizer.js` lines 216-218
+
+The trade-off card lets users switch between three presets:
+- Quality (wTuy=0.05, wBh=0.05)
+- Balanced (wTuy=0.10, wBh=0.10)
+- Energy (wTuy=0.05, wBh=0.05)
+
+These present fBh and fTuy as meaningful objectives alongside fMtl, fEnergy, fHdn. **They are not**:
+- fBh always returns 0 (P1) — **wBh is completely wasted**
+- FTuy is never inverted (G7) — **wTuy actively worsens optimization**
+
+The preset names and descriptions imply balanced optimization across all dimensions. In reality, 10-20% of the weight allocation (wTuy + wBh) is counterproductive or inert. A user selecting "Balanced" gets 70% real signal and 30% noise/wrongness.
+
+### F2. f_tuy result row can show inverted rankings
+
+**File**: `frontend/src/optimizer.js` line 165
+
+```js
+['f_tuy', fTuyWorst, fTuyBest, pctTuy, (bestScore.fTuy - worstScore.fTuy)],
+```
+
+The results table compares fTuy between the "best" and "worst" scored orientations. Since FTuy is not inverted, the "best" orientation (lowest combined score) may actually have **worse** Tuy-Smith completeness than the "worst." The improvement percentage shown is meaningless.
+
+### F3. IntelliScan info text has threshold mismatch with backend
+
+**File**: `frontend/src/optimizer.js` line 251 (hardcoded HTML)
+> Tangent angles computed for parallel-beam geometry. For wide-angle cone-beam systems (SOD/SDD &lt; 0.6), consider verifying critical angles manually.
+
+**File**: `internal/search/intelliscan.go` line 51
+> `coneRatio < 0.7` → cone-beam mode
+
+The frontend warns at SOD/SDD < 0.6, but the backend switches to "cone-beam" geometry at SOD/SDD < 0.7. These thresholds are inconsistent. The frontend will show the parallel-beam warning when the backend has already switched to cone-beam mode and vice versa.
+
+### F4. Energy recommendation lacks physics caveat
+
+**File**: `frontend/src/optimizer.js` line 202
+
+```js
+$('energy-caveat').textContent = 'Qualitative estimate. Actual consumption depends on scanner hardware.';
+```
+
+This caveat attributes inaccuracy to hardware variation. It doesn't mention that the underlying spectrum model is a simplified heuristic (W1), not the cited Tucker/Boone model, and that the kV recommendation may be off by 10-30 kV for heavily filtered beams.
+
+### F5. Results panel doesn't communicate uncertainty
+
+The optimal orientation is presented as a single definitive pair (θ, φ). The search produces a ranked list of candidates, but the UI shows only the best and worst. There's no indication of:
+- How close the second-best candidate scores
+- Whether the top-3 refined orientations converged to the same region
+- The confidence in the result given the coarse→fine resolution gap
+
+A 
 
 ### D1. search.go package doc says 10°, implements 15°
 
@@ -244,9 +406,9 @@ These are left over from a refactoring pass and should be cleaned up.
 | **Butzhammer 2026** | Automatic 3D tangent-ray detection, STL input, method A | Method B not implemented, no reference-scan pose estimation integration | **70%** |
 | **Grozmani 2019** | Shared geometric proxy concept (f_mtl, f_energy) | f_uncertainty not implemented, no SOD optimization, no experimental validation | **30%** |
 | **Deb 2002** | Nothing implemented — entire NSGA-II section is aspirational | **0%** |
-| **Tucker/Boone 1991/1997** | Effective energy concept | Simplified heuristic spectrum, no depth-dependent model, no characteristic lines, no inherent filtration, unvalidated | **25%** |
+| **Tucker/Boone 1991/1997** | Effective energy concept | Simplified heuristic spectrum, no depth-dependent model, no characteristic lines, no inherent filtration, unvalidated | **15%** |
 | **Alsaffar 2022** | Nothing implemented — scatter awareness completely absent | **0%** |
-| **NIST XCOM** | 40+ materials with log-log interpolation, Beer-Lambert physics, filter transmission, kV recommendation | Unverified against current NIST standard, incomplete K-edge handling, no temperature/density correction | **75%** |
+| **NIST XCOM** | 40+ materials with log-log interpolation, Beer-Lambert physics, filter transmission, kV recommendation | Unverified against current NIST standard, incomplete K-edge handling (only 3/40+ materials), ported third-hand from JS | **55%** |
 
 ---
 
@@ -254,10 +416,10 @@ These are left over from a refactoring pass and should be cleaned up.
 
 ### High priority:
 
-1. **Document the 15° → 10° coarse grid deviation** in the Ito research note — with rationale and validation
-2. **Fix FTuy inversion** — Either apply `1 - tuy` in the scoring path or document why the pass-through is correct
-3. **Add known-answer tests** for at least one simple geometry (e.g., a cube where optimal orientation is known by symmetry)
-4. **Verify NIST XCOM material data** against the online tool for at least 3 representative materials (Al, Fe, Pb)
+1. **Fix FTuy inversion** — Apply `1 - tuy` in the scoring path. Currently 5-10% of the optimization signal actively prefers worse Tuy-Smith completeness.
+2. **Add known-answer tests** for at least one simple geometry (e.g., a cube where optimal orientation is known by symmetry)
+3. **Verify NIST XCOM material data** against the online tool for at least 3 representative materials (Al, Fe, Pb)
+4. **Document the 15° → 10° coarse grid deviation** in the Ito research note — with rationale and validation
 
 ### Lower priority:
 
@@ -267,6 +429,20 @@ These are left over from a refactoring pass and should be cleaned up.
 8. **Remove dead code**: `EmitProgress` stub, `mu()` function, unused `Min`/`Max`, `three-mesh-bvh` dependency
 9. **Clean up refactoring artifacts**: "Vector helpers removed" comments, underscore-prefixed Go functions
 
+### Engineering task (small-part handling — no research needed):
+
+10. **Add ray-grid undersampling detection** — Compute `hitRatio = nonZeroRays ÷ totalRays` per orientation in `ComputeTransmissionLengths()`. Surface as a `CoverageFraction` field on `OrientationResult`.
+11. **Add coverage warning** — When hitRatio < 5%, emit a warning in the search results: "Only X% of rays intersected the part. Increase ray grid or adjust scanner geometry."
+12. **Auto-size the ray grid** — In `search.Run()`, scale the default `RayGridX/Y` based on `partExtent ÷ detectorSize`. If the part bounding box is <10% of the detector, start at 32×32 instead of 8×8.
+13. **Fallback to face-centroid sampling** — For very small parts (part extent < 2× inter-ray spacing), switch from grid-based sampling to per-face centroid ray casting (infrastructure exists in `ComputeFacePenetrations()`). This guarantees every face is sampled at the cost of more rays.
+
+### Frontend fixes (should accompany backend fixes):
+
+14. **Sync IntelliScan threshold** between frontend (0.6) and backend (0.7) — `optimizer.js` vs `intelliscan.go`
+15. **Update energy caveat** to mention simplified spectrum model, not just hardware variation
+16. **Add convergence indicator** to results — show second-best score or top-3 spread so users can judge result confidence
+17. **Update weight preset descriptions** in the trade-off card UI to reflect that fBh is not yet functional
+
 ---
 
 ## Tagged Findings (for traceability)
@@ -274,22 +450,32 @@ These are left over from a refactoring pass and should be cleaned up.
 | ID | File(s) | Paper | Type | Status |
 |---|---|---|---|---|
 | G1 | internal/search/search.go | Ito 2020 | 15° vs 10° grid | ❌ Open |
-| G2 | internal/objectives/objectives.go | Ito 2020 | f_hdn uses wrong proxy | ⚠️ Known/doc'd |
+| G2 | internal/objectives/objectives.go | Ito 2020 | f_hdn uses wrong proxy (plus double-counted with f_energy) | ⚠️ Known/doc'd |
 | G3 | search/, tuy.go | Ito 2020 | f_fdk not optimized | ❌ Open |
-| G4 | internal/search/search.go | Ito 2020 | Global vs batch normalization | ⚠️ Intentional improvement |
+| G4a | internal/search/search.go | Ito 2020 | Global vs batch normalization | ⚠️ Intentional improvement |
+| G4b | internal/search/search.go | Ito 2020 | Coarse/fine ray grid resolution mismatch | ❌ Open |
 | G5 | raycaster/, bvh/ | Heinzl 2011 | CPU vs GPU | ⚠️ Intentional design |
 | G6 | search/intelliscan.go | Butzhammer 2026 | Method B not implemented | ❌ Open |
+| G7 | objectives.go | Ito 2020 | FTuy inverted — optimizes for worse completeness | 🔴 BLOCKER |
+| G8 | internal/search/search.go | Ito 2020 | Fine search angle-wrapping evaluates irrelevant orientations | ❌ Open |
 | P1 | search.go, objectives.go | — | fBh placeholder (0) | ❌ Open |
-| P2 | objectives.go | — | FTuy never inverted (now actively wrong since 5 weights transmit) | ❌ Open |
-| P3 | — | Grozmani 2019 | f_uncertainty not implemented | ❌ Open |
+| P2 | — | Grozmani 2019 | f_uncertainty not implemented | ❌ Open |
 | W1 | internal/physics/material.go | Tucker/Boone | Simplified spectrum model | ⚠️ Known/doc'd |
 | W2 | — | Alsaffar | No scatter model | ❌ Open |
-| W3 | internal/physics/mats_data.go | NIST XCOM | Unverified data | ❌ Open |
-| W4 | search/intelliscan.go | Butzhammer 2026 | Cone-beam approximation unvalidated | ❌ Open |
+| W3 | internal/physics/mats_data.go | NIST XCOM | Unverified data (ported third-hand from JS) | ❌ Open |
+| W4 | search/intelliscan.go | Butzhammer 2026 | Cone-beam approximation — uses parallel-beam unconditionally | ❌ Open |
+| W5 | internal/bvh/bvh.go | — | BVH early-exit skips intersections for non-watertight meshes | ❌ Open |
 | T1 | internal/app/* | — | Zero tests for app layer | ❌ Open |
 | T2 | physics/ | NIST XCOM | No cross-validation against NIST standard | ❌ Open |
 | T3 | search/, objectives/ | Ito 2020 | No known-answer tests | ❌ Open |
 | T4 | (cross-cutting) | — | No end-to-end tests | ❌ Open |
+| T5 | raycaster/ | — | No small-part / undersampling test | ❌ Open |
 | D1 | search/search.go | Ito 2020 | Docstring says 10°, implements 15° | ❌ Open |
 | D2 | raycaster/raycaster.go | — | Refactoring artifacts | ❌ Open |
+| G9 | raycaster/, search/, objectives/ | — | No handling for small parts — ray grid undersamples mesh | ❌ Open |
+| F1 | frontend/src/state.js, optimizer.js | — | Weight presets misrepresent fBh/fTuy as meaningful | ❌ Open |
+| F2 | frontend/src/optimizer.js | — | f_tuy result row shows inverted rankings | ❌ Open |
+| F3 | frontend/src/optimizer.js vs intelliscan.go | — | IntelliScan threshold mismatch (0.6 vs 0.7) | ❌ Open |
+| F4 | frontend/src/optimizer.js | — | Energy caveat omits simplified spectrum model | ❌ Open |
+| F5 | frontend/src/optimizer.js | — | No uncertainty communication on results | ❌ Open |
 
