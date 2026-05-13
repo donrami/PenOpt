@@ -2,9 +2,13 @@ package main
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 
 	"penopt/internal/app"
 	"penopt/internal/raycaster"
+
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // App is the main Wails application struct, composing focused adapters.
@@ -101,4 +105,34 @@ func (a *App) GetDefaultScannerConfig() raycaster.ScannerConfig { return a.Scann
 
 // ComputeFaceHeatmap computes per-face max penetration at (theta, phi).
 func (a *App) ComputeFaceHeatmap(theta, phi float64) string { return a.ScannerAPI.ComputeFaceHeatmap(theta, phi) }
+
+// SaveFile opens a native Save File dialog and writes data to the chosen path.
+// Returns the full file path if saved, empty string if cancelled, or an error.
+func (a *App) SaveFile(defaultName string, data []byte) (string, error) {
+	ext := filepath.Ext(defaultName)
+	filterName := ext + " files"
+	if ext == ".json" {
+		filterName = "JSON files (*.json)"
+	} else if ext == ".png" {
+		filterName = "PNG images (*.png)"
+	}
+
+	path, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+		DefaultDirectory: "",
+		DefaultFilename:  defaultName,
+		Title:            "Save file",
+		Filters: []runtime.FileFilter{
+			{DisplayName: filterName, Pattern: "*" + ext},
+		},
+		ShowHiddenFiles:      false,
+		CanCreateDirectories: true,
+	})
+	if err != nil {
+		return "", err
+	}
+	if path == "" {
+		return "", nil // user cancelled
+	}
+	return path, os.WriteFile(path, data, 0644)
+}
 

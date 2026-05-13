@@ -2,8 +2,8 @@
 import { S, $, qsa, DEG, WEIGHT_PRESETS, TUBE_BIAS_BAND_KV, TUBE_COMFORT_MARGIN_KV, showError, setStatus, invalidateResults, clearStaleResults } from './state.js';
 import { applyHeatmap, animateRotation } from './scene.js';
 import { recalcBeam } from './materials.js';
-import { RunOptimization, ComputeFaceHeatmap, CalcEnergyRecommendation } from '../wailsjs/go/main/App';
-import { drawContourPlot, drawPenetrationRose } from './plots.js';
+import { RunOptimization, ComputeFaceHeatmap, CalcEnergyRecommendation, SaveFile } from '../wailsjs/go/main/App';
+import { drawContourPlot, drawPenetrationRose, setupContourHover, setupRoseHover } from './plots.js';
 import { exportJSON, exportPNG } from './export.js';
 
 const runtime = window.runtime;
@@ -268,13 +268,13 @@ function showResults(result) {
     : '--');
 
   const rows = [
-    ['Mean Pen.', worstScore.fMtl.toFixed(3), bestScore.fMtl.toFixed(3), pct(bestScore.fMtl, worstScore.fMtl), (bestScore.fMtl - worstScore.fMtl)],
-    ['Peak Path', worstScore.fEnergy.toFixed(1) + ' mm', bestScore.fEnergy.toFixed(1) + ' mm', pct(bestScore.fEnergy, worstScore.fEnergy), (bestScore.fEnergy - worstScore.fEnergy)],
-    ['Range', worstScore.fHdn.toFixed(3), bestScore.fHdn.toFixed(3), pct(bestScore.fHdn, worstScore.fHdn), (bestScore.fHdn - worstScore.fHdn)],
-    ['Completeness', fTuyWorst, fTuyBest, ppTuy, (bestScore.fTuy - worstScore.fTuy), true],
+    ['Mean Pen.', 'f_mtl — Generalized cube-root mean of all path lengths. Lower = less total material.', worstScore.fMtl.toFixed(3), bestScore.fMtl.toFixed(3), pct(bestScore.fMtl, worstScore.fMtl), (bestScore.fMtl - worstScore.fMtl)],
+    ['Peak Path', 'f_energy — Maximum single-ray path length (mm). Determines required kV.', worstScore.fEnergy.toFixed(1) + ' mm', bestScore.fEnergy.toFixed(1) + ' mm', pct(bestScore.fEnergy, worstScore.fEnergy), (bestScore.fEnergy - worstScore.fEnergy)],
+    ['Range', 'f_hdn — Range of max path lengths across projections. Lower = more isotropic coverage.', worstScore.fHdn.toFixed(3), bestScore.fHdn.toFixed(3), pct(bestScore.fHdn, worstScore.fHdn), (bestScore.fHdn - worstScore.fHdn)],
+    ['Completeness', 'Tuy-Smith completeness — % of faces with a tangent projection. ≥90% avoids cone-beam artifacts.', fTuyWorst, fTuyBest, ppTuy, (bestScore.fTuy - worstScore.fTuy), true],
   ];
   $('opt-table-body').innerHTML = rows.map(r =>
-    `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td ${style(r[4], r[5])}>${r[3]}</td></tr>`
+    `<tr><td data-tip="${r[1]}">${r[0]}</td><td>${r[2]}</td><td>${r[3]}</td><td ${style(r[5], r[6])}>${r[4]}</td></tr>`
   ).join('');
 
   // Tuy completeness warning
@@ -443,11 +443,18 @@ function showResults(result) {
     animateRotation(S.meshObject, best.theta * DEG, best.phi * DEG);
   }
 
-  // Draw plots
-  drawContourPlot(result.allScores, best, worst, result.isPartial);
+  // Draw plots (state managed internally)
+  drawContourPlot(result.allScores, best, worst, result.isPartial, null, null, result);
   var bestProj = bestScore && bestScore.maxPerProjection;
   var worstProj = worstScore && worstScore.maxPerProjection;
   drawPenetrationRose(bestProj, worstProj, result.isPartial, null, null);
+
+  // Wire up plot hover/zoom interactions on first run
+  if (!window.__plotInteractionsSetup) {
+    setupContourHover();
+    setupRoseHover();
+    window.__plotInteractionsSetup = true;
+  }
 
   // Enable tradeoff card (also unhide if previously hidden by removeMesh)
   $('card-tradeoff').style.display = '';
@@ -486,15 +493,15 @@ function renderIntelliScan(result) {
     html += '<tr><td>' + (i + 1) + '</td><td>' + a.toFixed(1) + '\u00B0</td></tr>';
   });
   html += '</tbody></table></div>';
-  html += '<div class="is-actions"><button class="is-btn" id="is-copy-btn">Copy angles</button><button class="is-btn" id="is-export-btn">Export JSON</button></div>';
-  if (data.warning) html += '<div class="is-warning">\u2139 ' + data.warning + '</div>';
+  html += '<div class="is-actions"><button class="is-btn" id="is-copy-btn" data-tip="Copy all IntelliScan angles to clipboard as comma-separated values">Copy angles</button><button class="is-btn" id="is-export-btn" data-tip="Export IntelliScan angles as JSON file">Export JSON</button></div>';
+  if (data.warning) html += '<div class="is-warning" data-tip="IntelliScan warning — mesh geometry may limit tangent angle detection. Review the angles manually.">\u2139 ' + data.warning + '</div>';
   html += '<div class="is-ref">Based on Butzhammer 2026 tangent-ray selection.</div>';
   var geoMode = data.geometryMode || 'parallel';
-  var infoHtml = 'Tangent angles computed for ' + geoMode + '-beam geometry.';
+  var infoHtml = 'IntelliScan tangent angles computed for ' + geoMode + '-beam geometry. Retains subset of 360° where the beam is tangent to mesh faces.';
   if (geoMode === 'cone-beam') {
-    infoHtml += ' For wide-angle cone-beam systems, consider verifying critical angles manually.';
+    infoHtml += ' For wide-angle cone-beam systems, verify critical angles manually.';
   }
-  html += '<div class="is-info">' + infoHtml + '</div>';
+  html += '<div class="is-info" data-tip="IntelliScan geometry mode — affects tangent condition calculation. Parallel-beam is accurate enough for most systems.">' + infoHtml + '</div>';
   body.innerHTML = html;
 
   var cb = document.getElementById('is-copy-btn');
@@ -508,12 +515,18 @@ function renderIntelliScan(result) {
   var eb = document.getElementById('is-export-btn');
   if (eb) eb.onclick = function() {
     var json = JSON.stringify({ intelliScanAngles: data.angles, count: data.count }, null, 2);
-    var blob = new Blob([json], { type: 'application/json' });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url; a.download = 'intelliscan-angles.json';
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+    var material = (S.materialID || 'unknown').replace(/[^a-zA-Z0-9_-]/g, '_');
+    var date = new Date().toISOString().slice(0, 10);
+    var name = 'penopt-intelliscan_' + material + '_' + date + '.json';
+    var bytes = new TextEncoder().encode(json);
+    SaveFile(name, bytes).then(function(path) {
+      if (path) {
+        eb.textContent = 'Saved!';
+        setTimeout(function() { eb.textContent = 'Export JSON'; }, 1500);
+      }
+    }).catch(function(err) {
+      console.warn('IntelliScan export failed:', err);
+    });
   };
 }
 

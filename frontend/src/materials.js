@@ -17,6 +17,8 @@ export function renderMatGrid() {
     el.type = 'button';
     el.className = 'mat-item'; el.dataset.id = m.id;
     if (S.materialID === m.id) el.classList.add('active');
+    const density = m.rho ? m.rho.toFixed(2) + ' g/cm³' : '';
+    el.setAttribute('data-tip', `${m.name} — ρ=${density}${m.kEdge ? ', K-edge ' + m.kEdge + ' keV' : ''}`);
     el.innerHTML = `<span class="mat-swatch" style="background:${m.color}"></span><span class="mat-name">${m.name}</span>`;
     el.addEventListener('click', () => selectMaterial(m.id));
     grid.appendChild(el);
@@ -57,6 +59,7 @@ export function renderFilters() {
     const el = document.createElement('button');
     el.type = 'button';
     el.className = 'filter-btn' + (S.filterID === f.id ? ' active' : '');
+    if (f.desc) el.setAttribute('data-tip', f.desc);
     el.innerHTML = `<span class="fb-icon">${f.icon}</span><span class="fb-name">${f.name}</span>`;
     el.addEventListener('click', () => selectFilter(f.id));
     grid.appendChild(el);
@@ -78,7 +81,8 @@ export function setupSliders() {
   eSl.addEventListener('input', () => { S.energy = parseFloat(eSl.value); onEnergyChange(); });
   [30, 50, 76, 100, 150, 200, 300].forEach(v => {
     const btn = document.createElement('button');
-    btn.textContent = v; btn.addEventListener('click', () => { eSl.value = v; S.energy = v; recalcBeam(); });
+    btn.textContent = v; btn.setAttribute('data-tip', 'Set beam energy to ' + v + ' keV');
+    btn.addEventListener('click', () => { eSl.value = v; S.energy = v; recalcBeam(); });
     $('presets-energy').appendChild(btn);
   });
   const tSl = $('sl-tmin');
@@ -86,7 +90,8 @@ export function setupSliders() {
   tSl.addEventListener('input', () => { S.tPct = parseFloat(tSl.value); onTminChange(); });
   [0.01, 0.05, 0.10, 0.20, 0.50, 1.0, 2.0].forEach(v => {
     const btn = document.createElement('button');
-    btn.textContent = v.toFixed(2); btn.addEventListener('click', () => { tSl.value = v; S.tPct = v; recalcBeam(); });
+    btn.textContent = v.toFixed(2); btn.setAttribute('data-tip', 'Set Tmin to ' + v.toFixed(2) + '%');
+    btn.addEventListener('click', () => { tSl.value = v; S.tPct = v; recalcBeam(); });
     $('presets-tmin').appendChild(btn);
   });
 

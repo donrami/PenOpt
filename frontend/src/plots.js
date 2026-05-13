@@ -3,21 +3,27 @@
 
 // setupCanvas configures a canvas element for HiDPI rendering.
 // Returns dimensions plus a resize callback to re-render on container changes.
-export function setupCanvas(canvasId, defaultWidth, defaultHeight, targetCanvas) {
+export function setupCanvas(canvasId, defaultWidth, defaultHeight, targetCanvas, sizeOverride) {
   const cv = targetCanvas || document.getElementById(canvasId);
   if (!cv) return { cv: null, ctx: null, w: 0, h: 0 };
   const dpr = window.devicePixelRatio || 1;
-  const parent = cv.parentElement;
-  const rect = parent.getBoundingClientRect();
-  const w = Math.max(rect.width - 4, Math.min(defaultWidth, 200));
-  const h = Math.max(defaultHeight, 100);
+  let w, h;
+  if (sizeOverride) {
+    w = sizeOverride.w;
+    h = sizeOverride.h;
+  } else {
+    const parent = cv.parentElement;
+    const rect = parent.getBoundingClientRect();
+    w = Math.max(rect.width - 4, Math.min(defaultWidth, 200));
+    h = Math.max(defaultHeight, 100);
+  }
   cv.width = w * dpr;
   cv.height = h * dpr;
   cv.style.width = w + 'px';
   cv.style.height = h + 'px';
   const ctx = cv.getContext('2d');
   ctx.scale(dpr, dpr);
-  return { cv, ctx, w, h, parent };
+  return { cv, ctx, w, h };
 }
 
 // ── Plot Interaction State ──
@@ -56,26 +62,29 @@ function hideHoverInfo() {
 }
 
 // ── Expanded plot modal ──
-let _expandedHoverAttached = false;
-
-// Hover mapper for canvas-expanded — dispatches to contour or rose logic.
+// Hover for canvas-expanded — replaces listeners each time to avoid accumulation.
 function setupExpandedHover(kind) {
-  const canvas = document.getElementById('canvas-expanded');
+  var canvas = document.getElementById('canvas-expanded');
   if (!canvas) return;
-  if (_expandedHoverAttached) return;
-  _expandedHoverAttached = true;
 
-  function expandedMousemove(e) {
-    const rect = canvas.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-    const canvasW = parseInt(canvas.style.width) || (canvas.width / dpr);
-    const canvasH = parseInt(canvas.style.height) || (canvas.height / dpr);
-
-    if (kind === 'contour') { expandedContourHover(e, rect, canvasW, canvasH); }
-    else { expandedRoseHover(e, rect, canvasW, canvasH); }
+  // Stale listener cleanup
+  if (canvas._expandedHandler) {
+    canvas.removeEventListener('mousemove', canvas._expandedHandler);
+    canvas.removeEventListener('mouseleave', canvas._expandedLeaveHandler);
   }
 
-  canvas.addEventListener('mousemove', expandedMousemove);
+  var handler = function(e) {
+    var rect = canvas.getBoundingClientRect();
+    var dpr = window.devicePixelRatio || 1;
+    var cw = parseInt(canvas.style.width) || (canvas.width / dpr);
+    var ch = parseInt(canvas.style.height) || (canvas.height / dpr);
+    if (kind === 'contour') { expandedContourHover(e, rect, cw, ch); }
+    else { expandedRoseHover(e, rect, cw, ch); }
+  };
+
+  canvas._expandedHandler = handler;
+  canvas._expandedLeaveHandler = hideHoverInfo;
+  canvas.addEventListener('mousemove', handler);
   canvas.addEventListener('mouseleave', hideHoverInfo);
 }
 
@@ -148,44 +157,66 @@ export function showExpandedPlot(kind) {
 
   var overlay = document.getElementById('plot-overlay');
   var canvas = document.getElementById('canvas-expanded');
-  var titleEl = document.getElementById('plot-expand-title');
-  if (!overlay || !canvas || !titleEl) return;
+  if (!overlay || !canvas) return;
 
-  // Size canvas to viewport
+  // Compute aspect ratio from data
+  var aspect = 1;
+  if (kind === 'contour' && _contourCache) {
+    var tr = _contourCache.tMax - _contourCache.tMin || 1;
+    var pr = _contourCache.pMax - _contourCache.pMin || 1;
+    aspect = tr / pr;
+  }
+
+  // Size canvas: fill up to ~88% viewport while preserving aspect ratio
+  var maxW = window.innerWidth * 0.88;
+  var maxH = window.innerHeight * 0.85;
+  var w, h;
+  if (aspect >= 1) {
+    w = maxW;
+    h = maxW / aspect;
+    if (h > maxH) { h = maxH; w = maxH * aspect; }
+  } else {
+    h = maxH;
+    w = maxH * aspect;
+    if (w > maxW) { w = maxW; h = maxW / aspect; }
+  }
+  w = Math.round(w);
+  h = Math.round(h);
+
   var dpr = window.devicePixelRatio || 1;
-  var w = Math.min(window.innerWidth * 0.78, 1100);
-  var h = Math.min(window.innerHeight * 0.62, 700);
   canvas.width = w * dpr;
   canvas.height = h * dpr;
   canvas.style.width = w + 'px';
   canvas.style.height = h + 'px';
 
-  // Optionally clear
   var ctx = canvas.getContext('2d');
   if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  _expandedHoverAttached = false;
-
-  if (kind === 'contour') {
-    titleEl.textContent = 'Score Contour \u2014 \u03B8 vs \u03C6';
-    drawContourPlot(
-      _contourState.scores, _contourState.best, _contourState.worst,
-      _contourState.isPartial, null, canvas, _contourState.result);
-    setupExpandedHover('contour');
-  } else {
-    titleEl.textContent = 'Penetration Rose \u2014 max path per projection angle';
-    drawPenetrationRose(
-      _roseState.bestData, _roseState.worstData, _roseState.isPartial,
-      canvas, _roseState.intelliScanAngles);
-    setupExpandedHover('rose');
-  }
-
+  // Show overlay immediately so backdrop paints before canvas draw
   overlay.classList.remove('hidden');
+
+  // Defer canvas draw one frame so backdrop appears without lag
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      var sizeOverride = { w: w, h: h };
+      if (kind === 'contour') {
+        drawContourPlot(
+          _contourState.scores, _contourState.best, _contourState.worst,
+          _contourState.isPartial, null, canvas, _contourState.result, sizeOverride);
+        setupExpandedHover('contour');
+      } else {
+        drawPenetrationRose(
+          _roseState.bestData, _roseState.worstData, _roseState.isPartial,
+          canvas, _roseState.intelliScanAngles, sizeOverride);
+        setupExpandedHover('rose');
+      }
+    });
+  });
 }
 
 // ── Contour Plot (preview small canvas) ──
-function drawContourPlot(scores, best, worst, isPartial, zoomBounds, targetCanvas, result) {
-  const { ctx, w, h } = setupCanvas('canvas-contour', 236, 176, targetCanvas);
+function drawContourPlot(scores, best, worst, isPartial, zoomBounds, targetCanvas, result, sizeOverride) {
+  const { ctx, w, h } = setupCanvas('canvas-contour', 236, 176, targetCanvas, sizeOverride);
   if (!ctx) return;
 
   const bgColor = '#131519';
@@ -427,8 +458,8 @@ function drawContourPlot(scores, best, worst, isPartial, zoomBounds, targetCanva
 }
 
 // ── Penetration Rose ──
-function drawPenetrationRose(bestData, worstData, isPartial, targetCanvas, intelliScanAngles) {
-  const { ctx, w, h } = setupCanvas('canvas-rose', 236, 176, targetCanvas);
+function drawPenetrationRose(bestData, worstData, isPartial, targetCanvas, intelliScanAngles, sizeOverride) {
+  const { ctx, w, h } = setupCanvas('canvas-rose', 236, 176, targetCanvas, sizeOverride);
   if (!ctx) return;
 
   ctx.fillStyle = '#131519';

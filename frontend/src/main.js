@@ -93,7 +93,12 @@ function setupKeyboard() {
           window.__prevFocusOnError.focus();
         }
         window.__prevFocusOnError = null;
-        animateModalClose($('help-overlay'));
+        // Close topmost overlay: plot first, then help
+        if (!$('plot-overlay').classList.contains('hidden')) {
+          animateModalClose($('plot-overlay'));
+        } else {
+          animateModalClose($('help-overlay'));
+        }
         break;
       case 'o': if (e.ctrlKey) { e.preventDefault(); PickAndLoadMesh().then(info => { if (info) handlePickedMesh(info); }).catch(err => showError('File picker error: ' + err)); } break;
       case 'Enter': if (e.ctrlKey) { e.preventDefault(); if (!($('btn-optimize')?.disabled ?? true) && !($('btn-optimize-sidebar')?.disabled ?? true)) runOptimization(); } break;
@@ -118,6 +123,9 @@ function setupHelp() {
   });
   $('btn-help-close').addEventListener('click', () => animateModalClose($('help-overlay')));
   $('help-overlay').addEventListener('click', e => { if (e.target === $('help-overlay')) animateModalClose($('help-overlay')); });
+
+  $('btn-plot-expand-close').addEventListener('click', () => animateModalClose($('plot-overlay')));
+  $('plot-overlay').addEventListener('click', e => { if (e.target === $('plot-overlay')) animateModalClose($('plot-overlay')); });
 
   // Focus trap — keeps keyboard navigation inside the open modal
   $('help-overlay').addEventListener('keydown', function(e) {
@@ -187,7 +195,7 @@ function setupTooltips() {
 
   // Shared hidden measuring element — prevents repeated DOM thrash
   var measEl = document.createElement('div');
-  measEl.style.cssText = 'position:fixed;top:-9999px;left:-9999px;visibility:hidden;padding:4px 8px;font-size:10px;font-weight:500;font-family:var(--font,Inter,sans-serif);line-height:1.4;max-width:300px;white-space:nowrap';
+  measEl.style.cssText = 'position:fixed;top:-9999px;left:-9999px;visibility:hidden;padding:4px 8px;font-size:11px;font-weight:500;font-family:var(--font,Inter,sans-serif);line-height:1.5;max-width:300px;white-space:normal';
   document.body.appendChild(measEl);
 
   function measureTooltip(text) {
@@ -200,7 +208,7 @@ function setupTooltips() {
     var el = document.createElement('div');
     el.className = 'js-tooltip';
     el.textContent = text;
-    el.style.cssText = 'position:fixed;top:-9999px;left:-9999px;padding:4px 8px;background:var(--surface,#1e2130);color:var(--text,#dde0ed);border:1px solid var(--border-light,#353850);border-radius:4px;font-size:10px;font-weight:500;font-family:var(--font,Inter,sans-serif);white-space:nowrap;pointer-events:none;z-index:9999;box-shadow:0 10px 20px rgba(0,0,0,0.45),0 4px 8px rgba(0,0,0,0.3);line-height:1.4;opacity:0;max-width:300px;overflow:hidden;text-overflow:ellipsis';
+    el.style.cssText = 'position:fixed;top:-9999px;left:-9999px;padding:4px 8px;background:var(--surface,#1e2130);color:var(--text,#dde0ed);border:1px solid var(--border-light,#353850);border-radius:4px;font-size:11px;font-weight:500;font-family:var(--font,Inter,sans-serif);white-space:normal;pointer-events:none;z-index:9999;box-shadow:0 10px 20px rgba(0,0,0,0.45),0 4px 8px rgba(0,0,0,0.3);line-height:1.5;opacity:0;max-width:300px';
     document.body.appendChild(el);
     return el;
   }

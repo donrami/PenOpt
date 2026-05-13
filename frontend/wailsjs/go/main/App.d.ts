@@ -29,3 +29,5 @@ export function LoadMeshFromBytes(arg1:string,arg2:Array<number>):Promise<app.Me
 export function PickAndLoadMesh():Promise<app.MeshInfo>;
 
 export function RunOptimization(arg1:main.runRequest):Promise<string>;
+
+export function SaveFile(arg1:string,arg2:Array<number>):Promise<string>;
