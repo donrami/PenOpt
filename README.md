@@ -1,4 +1,4 @@
-# PenOpt — CT Scan Orientation Optimizer
+# PenOpt - CT Scan Orientation Optimizer
 
 A desktop application that finds the optimal orientation for industrial X-ray CT scanning. Load a mesh (STL/OBJ), configure beam energy and scanner geometry, and search over tilt/rotation angles to minimize penetration, energy requirements, and cone-beam artifacts.
 
@@ -13,7 +13,7 @@ A desktop application that finds the optimal orientation for industrial X-ray CT
 
 PenOpt solves a concrete problem in industrial CT scanning: **which orientation should you scan a part in?** Given a 3D mesh, it casts X-rays through the geometry, evaluates five image-quality objectives over hundreds of orientations, and returns the optimal tilt (θ) and rotation (φ) angles. It also generates IntelliScan projection schedules (Butzhammer 2026) and tells you what kV you'll need.
 
-Built with [Wails v2](https://wails.io/) — Go backend with BVH-accelerated ray casting, Three.js/WebGL frontend.
+Built with [Wails v2](https://wails.io/) - Go backend with BVH-accelerated ray casting, Three.js/WebGL frontend.
 
 ## Quick Start
 
@@ -37,7 +37,7 @@ Open http://localhost:34115 after `wails dev` starts. On Linux, install Wails sy
 | Capability | Details |
 |---|---|
 | **Ray casting** | BVH-accelerated (median-split BVH, Möller-Trumbore), parallel goroutines |
-| **Search** | Coarse-to-fine grid: 15° → 1° refinement, global normalization |
+| **Search** | Coarse-to-fine grid: 15° to 1° refinement, global normalization |
 | **Objectives** | f_mtl (generalized-mean penetration), f_energy (max path), f_hdn (projection range) |
 | **Scoring** | Minimax or weighted combination, 3 weight presets |
 | **Tuy-Smith tracking** | Completeness fraction per orientation, warning < 90% |
@@ -48,16 +48,16 @@ Open http://localhost:34115 after `wails dev` starts. On Linux, install Wails sy
 | **3D viewport** | Three.js, smooth animated rotation, per-face heatmap, beam geometry viz |
 | **Analysis plots** | Score contour (bilinear-interpolated heatmap), penetration rose (polar) |
 | **Export** | JSON (full result set) and PNG (viewport + summary overlay) |
-| **Ray sampling** | Adjustable grid: 4×4 (fast preview) → 32×32 (high accuracy) |
-| **Search range** | ±30° → ±75° with boundary-edge warnings |
+| **Ray sampling** | Adjustable grid: 4×4 (fast preview) to 32×32 (high accuracy) |
+| **Search range** | ±30° to ±75° with boundary-edge warnings |
 
 ### In Depth
 
-- **Materials & Physics** — NIST XCOM attenuation database for 40+ materials, polyenergetic effective energy using 120-point spectrum integration, pre-filter presets with flux ratio and HVL-Cu computation, kV recommendation with qualitative guidance (Low / Medium / High)
-- **Scanner Configuration** — 13 industrial and medical CT presets, full manual control of SDD, SOD, detector dimensions, and pixel count
-- **Visualization** — Per-face penetration heatmap, score contour plot with search boundary overlay, penetration rose (optimal vs. worst orientation), optional 3D cone-beam diagram, compare mode with ghost overlay
-- **IntelliScan** — Computes unique tangent-ray projection angles from rotated face normals. Reports reduction vs. full 360° coverage with scan time estimate. Copy angles or export as JSON.
-- **UI** — Dark theme (Inter + JetBrains Mono), material filter tabs with live search, real-time progress ring with orientation HUD, keyboard shortcuts, session persistence across restarts
+- **Materials & Physics** - NIST XCOM attenuation database for 40+ materials, polyenergetic effective energy using 120-point spectrum integration, pre-filter presets with flux ratio and HVL-Cu computation, kV recommendation with qualitative guidance (Low / Medium / High)
+- **Scanner Configuration** - 13 industrial and medical CT presets, full manual control of SDD, SOD, detector dimensions, and pixel count
+- **Visualization** - Per-face penetration heatmap, score contour plot with search boundary overlay, penetration rose (optimal vs. worst orientation), optional 3D cone-beam diagram, compare mode with ghost overlay
+- **IntelliScan** - Computes unique tangent-ray projection angles from rotated face normals. Reports reduction vs. full 360° coverage with scan time estimate. Copy angles or export as JSON.
+- **UI** - Dark theme (Inter + JetBrains Mono), material filter tabs with live search, real-time progress ring with orientation HUD, keyboard shortcuts, session persistence across restarts
 
 ## Usage
 
@@ -67,18 +67,18 @@ Drag-and-drop or click the drop zone to open the native file dialog. Supports ST
 > **Non-watertight meshes**: Penetration values will be underestimated. A warning banner appears when open edges are detected.
 
 ### 2. Configure material
-Pick a material from the NIST XCOM database using the category tabs (All / Metallic / Non-Metallic) or the search field. Set beam energy (keV) and minimum transmission (Tmin) — the effective energy after filtering is computed live.
+Pick a material from the NIST XCOM database using the category tabs (All / Metallic / Non-Metallic) or the search field. Set beam energy (keV) and minimum transmission (Tmin) - the effective energy after filtering is computed live.
 
 ### 3. Configure scan
 Choose a scanner preset or set SDD, SOD, detector dimensions, and pixels manually. Optionally add a beam pre-filter and see effective energy shift, HVL-Cu, and flux ratio.
 
 ### 4. Set optimization parameters
-- **Quality / Balanced / Energy presets** — choose how to combine objectives (minimax or weighted)
-- **Ray Sampling slider** — lower values (4×4) for fast preview, higher (32×32) for accurate results
-- **Search Range slider** — narrow (±30°) for focused search, wide (±75°) for comprehensive coverage
+- **Quality / Balanced / Energy presets** - choose how to combine objectives (minimax or weighted)
+- **Ray Sampling slider** - lower values (4×4) for fast preview, higher (32×32) for accurate results
+- **Search Range slider** - narrow (±30°) for focused search, wide (±75°) for comprehensive coverage
 
 ### 5. Run optimization
-Click **Optimize** in the sidebar or viewport header. The search runs asynchronously — progress is shown as a ring overlay, percentage, and live orientation label (θ, φ). Stop the search at any time.
+Click **Optimize** in the sidebar or viewport header. The search runs asynchronously - progress is shown as a ring overlay, percentage, and live orientation label (θ, φ). Stop the search at any time.
 
 ### 6. Review results
 - Optimal orientation (θ, φ) with per-metric comparison to worst orientation
@@ -102,7 +102,7 @@ Save results as JSON for programmatic use, or as a PNG screenshot with summary o
 
 ## How It Works
 
-PenOpt searches over two angles — tilt θ (rotation around X) and rotation φ (rotation around Y) — evaluating ray casting results at each candidate orientation:
+PenOpt searches over two angles - tilt θ (rotation around X) and rotation φ (rotation around Y) - evaluating ray casting results at each candidate orientation:
 
 1. **Rotate** the mesh by θ and φ.
 2. **Cast rays** from the X-ray source through a ray grid at N projection angles, traversing the BVH to find all intersections and measure path length through solid material.
@@ -126,7 +126,7 @@ On Linux, install Wails system dependencies (`libgtk-3-dev`, `libwebkit2gtk-4.0-
 ```
 penopt/
 ├── main.go                    # Wails v2 entry point
-├── app.go                     # Thin composition layer — Go packages → frontend bindings
+├── app.go                     # Thin composition layer - Go packages to frontend bindings
 ├── go.mod / go.sum            # Go 1.23, Wails v2.12
 ├── wails.json                 # Wails configuration
 ├── frontend/
@@ -149,7 +149,7 @@ penopt/
 │   ├── objectives/            # f_mtl, f_energy, f_hdn, normalization, CombinedScore
 │   ├── physics/               # NIST XCOM database, Beer-Lambert, filter effects
 │   ├── raycaster/             # BVH ray casting, ray grid, transmission lengths, heatmap
-│   ├── search/                # Coarse→fine grid, global normalization
+│   ├── search/                # Coarse to fine grid, global normalization
 │   │   ├── search.go          # Search orchestration
 │   │   ├── intelliscan.go     # Tangent-ray angles (Butzhammer 2026)
 │   │   └── tuy.go             # Tuy-Smith completeness
@@ -172,17 +172,17 @@ penopt/
 
 ## References
 
-- **Ito, T. et al. (2020)** — "Optimization of X-ray CT scanning orientation for additive manufactured parts using ray casting." *Precision Engineering*, 64, 232–240.
-- **Butzhammer, L. et al. (2026)** — Tangent-ray selection for cone-beam CT. *Internal research reference.*
-- **Lifton, J. & Poon, E. (2023)** — IntelliScan adaptive projection allocation.
-- **NIST XCOM** — Photon Cross Sections Database.
+- **Ito, T. et al. (2020)** - "Optimization of X-ray CT scanning orientation for additive manufactured parts using ray casting." *Precision Engineering*, 64, 232–240.
+- **Butzhammer, L. et al. (2026)** - Tangent-ray selection for cone-beam CT. *Internal research reference.*
+- **Lifton, J. & Poon, E. (2023)** - IntelliScan adaptive projection allocation.
+- **NIST XCOM** - Photon Cross Sections Database.
 
 ## Roadmap
 
-- [ ] **f_bh implementation** — polyenergetic beam-hardening objective replacing the current placeholder
-- [ ] **NSGA-II multi-objective optimization** — Pareto-front exploration instead of scalarized weights
-- [ ] **Adaptive ray grid** — projection count dynamically allocated based on orientation variance
-- [ ] **Results history** — persist and compare multiple optimization runs
+- [ ] **f_bh implementation** - polyenergetic beam-hardening objective replacing the current placeholder
+- [ ] **NSGA-II multi-objective optimization** - Pareto-front exploration instead of scalarized weights
+- [ ] **Adaptive ray grid** - projection count dynamically allocated based on orientation variance
+- [ ] **Results history** - persist and compare multiple optimization runs
 
 ## Contributing
 
@@ -190,19 +190,19 @@ Contributions are welcome. Please open an issue to discuss changes before submit
 
 ## Acknowledgments
 
-- **[Möller-Trumbore algorithm](https://doi.org/10.1080/10867651.1997.10487468)** (Möller & Trumbore 1997) for ray-triangle intersection
-- **[NIST XCOM](https://dx.doi.org/10.18434/T48G6X)** (Berger et al., NISTIR 6537) — photon cross-section material database
-- **[Garland & Heckbert 1997](https://mgarland.org/files/papers/quadrics.pdf)** — Surface Simplification Using Quadric Error Metrics (used by fogleman/simplify)
-- **[fogleman/simplify](https://github.com/fogleman/simplify)** — Go implementation of quadric error metric mesh simplification
-- **Ito et al. (2020)** — orientation optimization framework using ray casting ([DOI](https://doi.org/10.58286/25108))
-- **Heinzl et al. (2011)** — ray casting methodology for CT specimen placement ([PDF](https://www.ndt.net/article/dir2011/papers/p6.pdf))
-- **Butzhammer et al. (2026)** — automated tangent-ray projection selection ([DOI](https://doi.org/10.58286/32560))
-- **Lifton & Poon (2023)** — IntelliScan adaptive projection allocation ([DOI](https://doi.org/10.3233/XST-221280))
-- **Tucker et al. (1991)** — tungsten anode X-ray spectrum model ([DOI](https://doi.org/10.1118/1.596709))
-- **Boone & Seibert (1997)** — accurate tungsten spectrum generation ([DOI](https://doi.org/10.1118/1.597953))
-- **Deb et al. (2002)** — NSGA-II multiobjective optimization (planned, [DOI](https://doi.org/10.1109/4235.996017))
-- **[Wails v2](https://github.com/wailsapp/wails)** — Go + web frontend desktop application framework
-- **[Three.js](https://github.com/mrdoob/three.js/)** (r170) — JavaScript 3D library for viewport rendering
+- **Möller-Trumbore algorithm** (Möller & Trumbore 1997) for ray-triangle intersection (https://doi.org/10.1080/10867651.1997.10487468)
+- **NIST XCOM** (Berger et al., NISTIR 6537) photon cross-section material database (https://dx.doi.org/10.18434/T48G6X)
+- **Garland & Heckbert 1997** Surface Simplification Using Quadric Error Metrics, used by fogleman/simplify (https://mgarland.org/files/papers/quadrics.pdf)
+- **fogleman/simplify** Go implementation of quadric error metric mesh simplification (https://github.com/fogleman/simplify)
+- **Ito et al. (2020)** orientation optimization framework using ray casting (https://doi.org/10.58286/25108)
+- **Heinzl et al. (2011)** ray casting methodology for CT specimen placement (https://www.ndt.net/article/dir2011/papers/p6.pdf)
+- **Butzhammer et al. (2026)** automated tangent-ray projection selection (https://doi.org/10.58286/32560)
+- **Lifton & Poon (2023)** IntelliScan adaptive projection allocation (https://doi.org/10.3233/XST-221280)
+- **Tucker et al. (1991)** tungsten anode X-ray spectrum model (https://doi.org/10.1118/1.596709)
+- **Boone & Seibert (1997)** accurate tungsten spectrum generation (https://doi.org/10.1118/1.597953)
+- **Deb et al. (2002)** NSGA-II multiobjective optimization, planned (https://doi.org/10.1109/4235.996017)
+- **Wails v2** Go + web frontend desktop application framework (https://github.com/wailsapp/wails)
+- **Three.js** r170 JavaScript 3D library for viewport rendering (https://github.com/mrdoob/three.js/)
 
 ## License
 
