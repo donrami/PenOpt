@@ -190,17 +190,19 @@ Contributions are welcome. Please open an issue to discuss changes before submit
 
 ## Acknowledgments
 
-- **Möller-Trumbore algorithm** (Möller & Trumbore 1997) for ray-triangle intersection
-- **NIST XCOM** (Berger et al., NISTIR 6537) for photon cross-section material data
-- **Ito et al. (2020)** — orientation optimization framework using ray casting
-- **Heinzl et al. (2011)** — ray casting methodology for CT specimen placement
-- **Butzhammer et al. (2026)** — automated tangent-ray projection selection (IntelliScan)
-- **Lifton & Poon (2023)** — IntelliScan adaptive projection allocation
-- **Tucker et al. (1991) / Boone & Seibert (1997)** — tungsten anode X-ray spectrum models
-- **Deb et al. (2002)** — NSGA-II multiobjective optimization (planned)
-- **Wails team** for the Go + web frontend integration framework
-- **Three.js** (r170) for 3D viewport rendering
-- **fogleman/simplify** — quadric error metric mesh simplification (Garland & Heckbert 1997)
+- **[Möller-Trumbore algorithm](https://doi.org/10.1080/10867651.1997.10487468)** (Möller & Trumbore 1997) for ray-triangle intersection
+- **[NIST XCOM](https://dx.doi.org/10.18434/T48G6X)** (Berger et al., NISTIR 6537) — photon cross-section material database
+- **[Garland & Heckbert 1997](https://mgarland.org/files/papers/quadrics.pdf)** — Surface Simplification Using Quadric Error Metrics (used by fogleman/simplify)
+- **[fogleman/simplify](https://github.com/fogleman/simplify)** — Go implementation of quadric error metric mesh simplification
+- **Ito et al. (2020)** — orientation optimization framework using ray casting ([DOI](https://doi.org/10.58286/25108))
+- **Heinzl et al. (2011)** — ray casting methodology for CT specimen placement ([PDF](https://www.ndt.net/article/dir2011/papers/p6.pdf))
+- **Butzhammer et al. (2026)** — automated tangent-ray projection selection ([DOI](https://doi.org/10.58286/32560))
+- **Lifton & Poon (2023)** — IntelliScan adaptive projection allocation ([DOI](https://doi.org/10.3233/XST-221280))
+- **Tucker et al. (1991)** — tungsten anode X-ray spectrum model ([DOI](https://doi.org/10.1118/1.596709))
+- **Boone & Seibert (1997)** — accurate tungsten spectrum generation ([DOI](https://doi.org/10.1118/1.597953))
+- **Deb et al. (2002)** — NSGA-II multiobjective optimization (planned, [DOI](https://doi.org/10.1109/4235.996017))
+- **[Wails v2](https://github.com/wailsapp/wails)** — Go + web frontend desktop application framework
+- **[Three.js](https://github.com/mrdoob/three.js/)** (r170) — JavaScript 3D library for viewport rendering
 
 ## License
 
