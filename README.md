@@ -6,7 +6,7 @@ A desktop application that finds the optimal orientation for industrial X-ray CT
 <!-- ![PenOpt UI](./docs/screenshot.png) -->
 
 [![Go 1.23+](https://img.shields.io/badge/Go-1.23+-00ADD8?style=flat-square&logo=go)](https://go.dev/dl/)
-[![Wails v2](https://img.shields.io/badge/Wails-v2-2.12-6e48d9?style=flat-square)](https://wails.io/)
+[![Wails](https://img.shields.io/badge/Wails-2.12-6e48d9?style=flat-square)](https://wails.io/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 
 ## What This Does
@@ -62,7 +62,7 @@ Open http://localhost:34115 after `wails dev` starts. On Linux, install Wails sy
 ## Usage
 
 ### 1. Load a mesh
-Drag-and-drop or click the drop zone to open the native file dialog. Supports STL (binary and ASCII) and OBJ. The mesh is centered at origin and a BVH is built on load. Watertight status and boundary edge count are shown.
+Drag-and-drop or click the drop zone to open the file dialog. Supports STL (binary and ASCII) and OBJ. The mesh is centered at origin and a BVH is built on load. Watertight status and boundary edge count are shown.
 
 > **Non-watertight meshes**: Penetration values will be underestimated. A warning banner appears when open edges are detected.
 
