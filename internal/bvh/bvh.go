@@ -285,9 +285,28 @@ func (bvh *BVH) IntersectAll(origin, dir mesh.Vec3) (hits []float64, triIndices 
 	triIndices = make([]int, 0, 64)
 	_intersectAllNode(bvh.Root, origin, dir, &hits, &triIndices, bvh.Triangles)
 
-	// Sort by distance (callers expect sorted results; triIndices left unsorted — unused)
+	// Sort by distance (callers expect sorted results).
+	// Carry triIndices along so callers can map hits back to triangle indices.
 	if len(hits) > 1 {
-		sort.Float64s(hits)
+		// Pair each hit distance with its triangle index, then sort by distance
+		type hitPair struct {
+			t   float64
+			idx int
+		}
+		pairs := make([]hitPair, len(hits))
+		for i := range hits {
+			pairs[i] = hitPair{t: hits[i], idx: triIndices[i]}
+		}
+		sort.Slice(pairs, func(i, j int) bool {
+			if pairs[i].t == pairs[j].t {
+				return pairs[i].idx < pairs[j].idx
+			}
+			return pairs[i].t < pairs[j].t
+		})
+		for i := range pairs {
+			hits[i] = pairs[i].t
+			triIndices[i] = pairs[i].idx
+		}
 	}
 	return
 }

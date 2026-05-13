@@ -53,18 +53,22 @@ func ComputeTuyCompleteness(m *mesh.Mesh, theta, phi float64) float64 {
 		ny /= area
 		nz /= area
 
-		// Rotate normal by (phi, theta) to match orientation
-		// First rotate around Y by phi, then around X by theta
-		cosP, sinP := math.Cos(phiRad), math.Sin(phiRad)
+		// Rotate normal by (θ, φ) to match orientation.
+		// Forward rotation: Ry(φ) · Rx(θ) — matches raycaster.go convention.
+		// Step 1: rotate around X by θ (Rx(θ))
+		// Step 2: rotate around Y by φ (Ry(φ))
 		cosT, sinT := math.Cos(thetaRad), math.Sin(thetaRad)
+		cosP, sinP := math.Cos(phiRad), math.Sin(phiRad)
 
-		// Rotate around Y: (nx, ny, nz) → (nx·cosP + nz·sinP, ny, -nx·sinP + nz·cosP)
+		// Rx(θ): (nx, ny, nz) → (nx, ny·cosθ − nz·sinθ, ny·sinθ + nz·cosθ)
+		ry := ny*cosT - nz*sinT
+		nz = ny*sinT + nz*cosT
+		ny = ry
+
+		// Ry(φ): (nx, ny, nz) → (nx·cosφ + nz·sinφ, ny, −nx·sinφ + nz·cosφ)
 		rx := nx*cosP + nz*sinP
-		rz := -nx*sinP + nz*cosP
-
-		// Rotate around X: (rx, ny, rz) → (rx, ny·cosT - rz·sinT, ny·sinT + rz·cosT)
+		nz = -nx*sinP + nz*cosP
 		nx = rx
-		nz = ny*sinT + rz*cosT
 
 		// A face is Tuy-complete if it has at least one tangent ray direction.
 		// For the circular trajectory d̂(α) = (-cos α, 0, sin α), the equation
