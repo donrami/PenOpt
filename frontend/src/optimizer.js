@@ -123,12 +123,16 @@ function showResults(result) {
 
   // Summary bar — plain language + directional indicators
   $('rs-angle').textContent = `\u03B8=${best.theta}\u00B0 \u03C6=${best.phi}\u00B0`;
-  const fmtlDelta = ((bestScore.fMtl - worstScore.fMtl) / worstScore.fMtl * 100);
-  const fenergyDelta = ((bestScore.fEnergy - worstScore.fEnergy) / worstScore.fEnergy * 100);
-  $('rs-fmtl').textContent = Math.abs(fmtlDelta).toFixed(1) + '% better';
-  $('rs-fmtl').style.color = fmtlDelta < 0 ? 'var(--green-500)' : 'var(--text)';
-  $('rs-fenergy').textContent = Math.abs(fenergyDelta).toFixed(1) + '% better';
-  $('rs-fenergy').style.color = fenergyDelta < 0 ? 'var(--green-500)' : 'var(--text)';
+  function pctDelta(best, worst) {
+    if (!worst || Math.abs(worst) < 1e-12) return null;
+    return (best - worst) / worst * 100;
+  }
+  const fmtlDelta = pctDelta(bestScore.fMtl, worstScore.fMtl);
+  const fenergyDelta = pctDelta(bestScore.fEnergy, worstScore.fEnergy);
+  $('rs-fmtl').textContent = fmtlDelta !== null ? Math.abs(fmtlDelta).toFixed(1) + '% better' : '--';
+  $('rs-fmtl').style.color = fmtlDelta !== null && fmtlDelta < 0 ? 'var(--green-500)' : 'var(--text)';
+  $('rs-fenergy').textContent = fenergyDelta !== null ? Math.abs(fenergyDelta).toFixed(1) + '% better' : '--';
+  $('rs-fenergy').style.color = fenergyDelta !== null && fenergyDelta < 0 ? 'var(--green-500)' : 'var(--text)';
   var totalEval = result.allScores.length;
   var coarseEval = result.numCoarseEval || 0;
   var fineEval = result.numFineEval || 0;
@@ -148,6 +152,23 @@ function showResults(result) {
 
   $('rs-evals').textContent = totalEval + ' orientations (' + timeStr + ')';
   $('rs-evals').parentElement.title = coarseEval + ' coarse + ' + fineEval + ' fine | ' + result.searchTimeMs.toFixed(0) + 'ms total';
+
+  // Convergence indicator
+  if (result.scoreGap !== undefined) {
+    var gapEl = $('rs-score-gap');
+    if (!gapEl) {
+      gapEl = document.createElement('div');
+      gapEl.id = 'rs-score-gap';
+      gapEl.style.cssText = 'margin-top:4px;font-size:9px;color:var(--text-dim);';
+      $('rs-evals').parentElement.appendChild(gapEl);
+    }
+    var gapPct = (result.scoreGap * 100).toFixed(1);
+    var gapText = 'Score gap vs runner-up: ' + gapPct + '%';
+    if (result.convergenceNote) {
+      gapText += ' \u2014 ' + result.convergenceNote;
+    }
+    gapEl.textContent = gapText;
+  }
 
   // Optimal orientation card
   $('opt-angles').textContent = `\u03B8 = ${best.theta}\u00B0  \u03C6 = ${best.phi}\u00B0`;
@@ -197,9 +218,12 @@ function showResults(result) {
     else { qual = '\u25BC Lower kV sufficient'; color = 'var(--green-500)'; }
     $('energy-qual').innerHTML = `<span style="color:${color}">${qual}</span>`;
     // Savings vs worst
-    const savings = ((1 - bestScore.fEnergy / worstScore.fEnergy) * 100).toFixed(0);
-    $('energy-savings').textContent = '~' + savings + '% less energy than worst orientation';
-    $('energy-caveat').textContent = 'Qualitative estimate. Actual consumption depends on scanner hardware.';
+    var savingsTxt = '--';
+    if (worstScore.fEnergy && Math.abs(worstScore.fEnergy) > 1e-12) {
+      savingsTxt = ((1 - bestScore.fEnergy / worstScore.fEnergy) * 100).toFixed(0);
+    }
+    $('energy-savings').textContent = '~' + savingsTxt + '% less energy than worst orientation';
+    $('energy-caveat').textContent = 'Qualitative estimate based on simplified spectrum model. Actual kV requirement depends on scanner hardware and tube spectrum characteristics.';
   }).catch(() => {});
 
   // Smoothly rotate mesh to optimal orientation
@@ -248,7 +272,12 @@ function renderIntelliScan(result) {
   html += '<div class="is-actions"><button class="is-btn" id="is-copy-btn">Copy angles</button><button class="is-btn" id="is-export-btn">Export JSON</button></div>';
   if (data.warning) html += '<div class="is-warning">\u2139 ' + data.warning + '</div>';
   html += '<div class="is-ref">Based on Butzhammer 2026 tangent-ray selection.</div>';
-  html += '<div class="is-info" style="margin-top:6px;padding:4px 6px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.15);border-radius:4px;font-size:9px;color:var(--text-dim);line-height:1.4">Tangent angles computed for parallel-beam geometry. For wide-angle cone-beam systems (SOD/SDD &lt; 0.6), consider verifying critical angles manually.</div>';
+  var geoMode = data.geometryMode || 'parallel';
+  var infoHtml = 'Tangent angles computed for ' + geoMode + '-beam geometry.';
+  if (geoMode === 'cone-beam') {
+    infoHtml += ' For wide-angle cone-beam systems, consider verifying critical angles manually.';
+  }
+  html += '<div class="is-info" style="margin-top:6px;padding:4px 6px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.15);border-radius:4px;font-size:9px;color:var(--text-dim);line-height:1.4">' + infoHtml + '</div>';
   body.innerHTML = html;
 
   var cb = document.getElementById('is-copy-btn');
@@ -360,6 +389,16 @@ export function setupTradeoff() {
       invalidateResults();
     });
   });
+  // Add fBh placeholder note below the preset buttons
+  if (!document.getElementById('bh-placeholder-note')) {
+    var bhNote = document.createElement('div');
+    bhNote.id = 'bh-placeholder-note';
+    bhNote.style.cssText = 'margin-top:4px;font-size:9px;color:var(--text-dim);line-height:1.3';
+    bhNote.textContent = 'Note: Beam-hardening optimization (fBh) coming in a future release. Weight redistributed to Tuy-Smith completeness.';
+    var tradeoffOpts = document.querySelector('.tradeoff-options');
+    if (tradeoffOpts) { tradeoffOpts.after(bhNote); }
+  }
+
   $('btn-update-search').addEventListener('click', () => {
     // Show loading state
     const btn = $('btn-update-search');

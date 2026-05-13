@@ -3,9 +3,11 @@
 // ── Constants ──
 export const DEG = Math.PI / 180;
 export const WEIGHT_PRESETS = [
-  { id: 0, name: 'Quality', wMtl: 0.5, wEnergy: 0.2, wHdn: 0.2, wTuy: 0.05, wBh: 0.05 },
-  { id: 1, name: 'Balanced', wMtl: 0.3, wEnergy: 0.3, wHdn: 0.2, wTuy: 0.1, wBh: 0.1 },
-  { id: 2, name: 'Energy', wMtl: 0.2, wEnergy: 0.5, wHdn: 0.2, wTuy: 0.05, wBh: 0.05 },
+  // wBh = 0.0: fBh is a placeholder returning 0 for all orientations.
+  // Weight redistributed to wTuy (both are artifact-related objectives).
+  { id: 0, name: 'Quality',   wMtl: 0.5, wEnergy: 0.2, wHdn: 0.2, wTuy: 0.1,  wBh: 0.0 },
+  { id: 1, name: 'Balanced',  wMtl: 0.3, wEnergy: 0.3, wHdn: 0.2, wTuy: 0.2,  wBh: 0.0 },
+  { id: 2, name: 'Energy',    wMtl: 0.2, wEnergy: 0.5, wHdn: 0.2, wTuy: 0.1,  wBh: 0.0 },
 ];
 
 // ── DOM Aliases ──

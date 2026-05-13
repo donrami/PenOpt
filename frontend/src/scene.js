@@ -110,6 +110,8 @@ export function animateRotation(mesh, targetTheta, targetPhi, duration = 400) {
 
     mesh.rotation.x = startTheta + deltaTheta * e;
     mesh.rotation.y = startPhi + dPhi * e;
+    // Render each frame so the user sees the smooth rotation
+    S.renderScene?.();
 
     if (t < 1) {
       _rotationAnimId = requestAnimationFrame(tick);
@@ -158,16 +160,32 @@ export function applyHeatmap() {
     if (!geo.attributes.color) {
       const pos = geo.attributes.position; const idx = geo.index;
       const numFaces = idx ? idx.count / 3 : pos.count / 3;
-      const colors = new Float32Array(pos.count * 3);
+      const numVerts = pos.count;
+      const colors = new Float32Array(numVerts * 3);
       const range = S.facePenMax - S.facePenMin || 1;
+      // Build vertex-face adjacency: for each vertex, sum penetration of all adjacent faces
+      const vSum = new Float32Array(numVerts);
+      const vCount = new Uint16Array(numVerts);
       for (let fi = 0; fi < numFaces && fi < S.facePenetrations.length; fi++) {
-        const norm = (S.facePenetrations[fi] - S.facePenMin) / range;
-        let r, g, b;
-        if (norm <= 0.5) { const t = norm / 0.5; r = 30 + t * 200; g = 180 - t * 130; b = 40 - t * 30; }
-        else { const t = (norm - 0.5) / 0.5; r = 230 + t * 25; g = 50 - t * 40; b = 10 - t * 8; }
+        const val = S.facePenetrations[fi] || 0;
         const i3 = fi * 3;
-        const ia = idx ? idx.getX(i3) : i3; const ib = idx ? idx.getX(i3 + 1) : i3 + 1; const ic = idx ? idx.getX(i3 + 2) : i3 + 2;
-        [ia, ib, ic].forEach(vi => { colors[vi*3] = r/255; colors[vi*3+1] = g/255; colors[vi*3+2] = b/255; });
+        const ia = idx ? idx.getX(i3) : i3;
+        const ib = idx ? idx.getX(i3 + 1) : i3 + 1;
+        const ic = idx ? idx.getX(i3 + 2) : i3 + 2;
+        vSum[ia] += val; vCount[ia]++;
+        vSum[ib] += val; vCount[ib]++;
+        vSum[ic] += val; vCount[ic]++;
+      }
+      // Per-vertex averaged value → color (GPU interpolates across triangle for smooth gradient)
+      function valToColor(norm) {
+        if (norm <= 0.5) { const t = norm / 0.5; return [30 + t * 200, 180 - t * 130, 40 - t * 30]; }
+        else { const t = (norm - 0.5) / 0.5; return [230 + t * 25, 50 - t * 40, 10 - t * 8]; }
+      }
+      for (let vi = 0; vi < numVerts; vi++) {
+        const avg = vCount[vi] > 0 ? vSum[vi] / vCount[vi] : 0;
+        const norm = (avg - S.facePenMin) / range;
+        const [r, g, b] = valToColor(Math.max(0, Math.min(1, norm)));
+        colors[vi*3] = r/255; colors[vi*3+1] = g/255; colors[vi*3+2] = b/255;
       }
       geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
     }
