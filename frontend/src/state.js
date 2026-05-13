@@ -152,6 +152,10 @@ export function invalidateResults() {
   const resultsPanel = $('results-panel');
   if (resultsPanel) resultsPanel.classList.add('results-stale');
 
+  // Toggle button amber when stale
+  const toggleBtn = $('results-collapse-btn');
+  if (toggleBtn) toggleBtn.classList.add('collapse-btn-stale');
+
   // Change Optimize buttons to "Re-optimize" with orangish fill
   const main = $('btn-optimize');
   const side = $('btn-optimize-sidebar');
@@ -169,6 +173,10 @@ export function clearStaleResults() {
   // Remove stale class from results panel
   const resultsPanel = $('results-panel');
   if (resultsPanel) resultsPanel.classList.remove('results-stale');
+
+  // Restore toggle button colour
+  const toggleBtn = $('results-collapse-btn');
+  if (toggleBtn) toggleBtn.classList.remove('collapse-btn-stale');
 
   // Restore Optimize buttons to default state
   const main = $('btn-optimize');

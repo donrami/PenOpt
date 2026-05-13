@@ -614,6 +614,7 @@ textarea:focus-visible {
 .os-dot--ready { background: var(--green-500); }
 .os-dot--searching { background: var(--accent); animation: pulse 1.2s ease-in-out infinite; }
 .os-dot--stale { background: var(--amber-500); }
+.os-dot--error { background: var(--red-500); }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 #os-text { font-size: 11px; color: var(--text-dim); line-height: var(--lh-label); }
 #grid-info { font-size: 11px; color: var(--text-muted); padding: 2px 0; }
@@ -1061,8 +1062,10 @@ textarea:focus-visible {
   padding: 2px;
   font-size: 14px;
   line-height: 1;
+  transition: color 0.3s ease;
 }
 #results-header .results-toggle:hover { color: var(--text); }
+#results-header .results-toggle.collapse-btn-stale { color: var(--amber-500); }
 
 /* Results content (scrollable) */
 #results-content {

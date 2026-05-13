@@ -72,11 +72,11 @@ export function runOptimization() {
     runtime.EventsOff('search:progress');
     runtime.EventsOff('search:done');
 
-    if (S.searchCancel) { finishSearch(); return; }
+    if (S.searchCancel) { finishSearch('cancel'); return; }
 
     if (data.error) {
       showError('Optimization error: ' + data.error);
-      finishSearch();
+      finishSearch('error');
       return;
     }
 
@@ -98,7 +98,7 @@ export function runOptimization() {
     } catch (err) {
       showError('Result parse error: ' + err.message);
     }
-    finishSearch();
+    finishSearch('success');
   });
 
   // Start the search (returns "started" immediately, results via events)
@@ -107,18 +107,31 @@ export function runOptimization() {
       if (!S.searchCancel) showError('Failed to start search: ' + err);
       runtime.EventsOff('search:progress');
       runtime.EventsOff('search:done');
-      finishSearch();
+      finishSearch('error');
     });
 }
 
-function finishSearch() {
+function finishSearch(outcome) {
+  // outcome: 'success' | 'cancel' | 'error'
   S.searching = false;
   $('btn-optimize').disabled = false; $('btn-optimize').innerHTML = '\u25B6 <span>Optimize</span>';
   $('vp-progress').classList.add('hidden'); $('hud-rot').classList.add('hidden');
   $('vp-search-overlay').classList.add('hidden');
-  $('os-dot').className = 'os-dot os-dot--ready';
-  $('os-text').textContent = S.searchCancel ? 'Cancelled' : 'Complete';
-  setStatus(S.searchCancel ? 'Search cancelled' : 'Optimization complete');
+
+  if (outcome === 'error') {
+    $('os-dot').className = 'os-dot os-dot--error';
+    $('os-text').textContent = 'Search failed';
+    setStatus('Optimization error — see details above');
+  } else if (outcome === 'cancel') {
+    $('os-dot').className = 'os-dot os-dot--ready';
+    $('os-text').textContent = 'Cancelled';
+    setStatus('Search cancelled');
+  } else {
+    $('os-dot').className = 'os-dot os-dot--ready';
+    $('os-text').textContent = 'Complete';
+    setStatus('Optimization complete');
+  }
+
   // Reset Update Search button
   var updateBtn = $('btn-update-search');
   if (updateBtn) { updateBtn.textContent = 'Update Search'; updateBtn.style.opacity = ''; }
@@ -245,20 +258,28 @@ function showResults(result) {
   // Optimal orientation card
   $('opt-angles').textContent = `\u03B8 = ${best.theta}\u00B0  \u03C6 = ${best.phi}\u00B0`;
   const pct = (bv, wv) => { if (!wv) return '--'; const ch = ((bv - wv) / wv * 100); return (ch >= 0 ? '+' : '') + ch.toFixed(1) + '%'; };
-  const style = (ch) => ch < 0 ? 'style="color:var(--green-500)"' : '';
+  const style = (ch, higherIsBetter) => {
+    if (higherIsBetter) return ch > 0 ? 'style="color:var(--green-500)"' : '';
+    return ch < 0 ? 'style="color:var(--green-500)"' : '';
+  };
 
   var fTuyBest = bestScore.fTuy !== undefined ? (bestScore.fTuy * 100).toFixed(1) + '%' : '--';
   var fTuyWorst = worstScore.fTuy !== undefined ? (worstScore.fTuy * 100).toFixed(1) + '%' : '--';
-  var pctTuy = (bestScore.fTuy !== undefined && worstScore.fTuy !== undefined) ? ((bestScore.fTuy - worstScore.fTuy) * 100 / (worstScore.fTuy || 1)).toFixed(1) + '%' : '--';
+  var ppTuySign = (bestScore.fTuy !== undefined && worstScore.fTuy !== undefined && Math.abs(bestScore.fTuy - worstScore.fTuy) > 1e-12)
+    ? (bestScore.fTuy > worstScore.fTuy ? '\u2191 ' : '\u2193 ')
+    : '';
+  var ppTuy = ppTuySign + ((bestScore.fTuy !== undefined && worstScore.fTuy !== undefined)
+    ? Math.abs((bestScore.fTuy - worstScore.fTuy) * 100).toFixed(1) + ' pp'
+    : '--');
 
   const rows = [
     ['Mean Pen.', worstScore.fMtl.toFixed(3), bestScore.fMtl.toFixed(3), pct(bestScore.fMtl, worstScore.fMtl), (bestScore.fMtl - worstScore.fMtl)],
     ['Peak Path', worstScore.fEnergy.toFixed(1) + ' mm', bestScore.fEnergy.toFixed(1) + ' mm', pct(bestScore.fEnergy, worstScore.fEnergy), (bestScore.fEnergy - worstScore.fEnergy)],
     ['Range', worstScore.fHdn.toFixed(3), bestScore.fHdn.toFixed(3), pct(bestScore.fHdn, worstScore.fHdn), (bestScore.fHdn - worstScore.fHdn)],
-    ['Completeness', fTuyWorst, fTuyBest, pctTuy, (bestScore.fTuy - worstScore.fTuy)],
+    ['Completeness', fTuyWorst, fTuyBest, ppTuy, (bestScore.fTuy - worstScore.fTuy), true],
   ];
   $('opt-table-body').innerHTML = rows.map(r =>
-    `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td ${style(r[4])}>${r[3]}</td></tr>`
+    `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td ${style(r[4], r[5])}>${r[3]}</td></tr>`
   ).join('');
 
   // Tuy completeness warning
