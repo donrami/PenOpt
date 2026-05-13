@@ -1,8 +1,8 @@
-# PenOpt -- CT Scan Orientation Optimizer
+# PenOpt - CT Scan Orientation Optimizer
 
 > **Find the optimal orientation for industrial X-ray CT scanning.** Load a 3D mesh (STL/OBJ), configure beam energy and scanner geometry, and search over tilt/rotation angles to minimize penetration path length, energy requirements, and cone-beam artifacts.
 
-<!-- ⏳ Screenshot: add `./docs/screenshot.png` and remove this comment -->
+<!-- Screenshot: add `./docs/screenshot.png` and remove this comment -->
 <!-- ![PenOpt UI](./docs/screenshot.png) -->
 
 [![Release v0.1.0](https://img.shields.io/badge/release-v0.1.0-blue?style=flat-square)](https://github.com/donrami/PenOpt)
@@ -39,7 +39,7 @@
 
 ### Prebuilt Binaries
 
-**⏳ Coming soon** -- prebuilt binaries for Windows, macOS, and Linux will be published on the [Releases page](https://github.com/donrami/PenOpt/releases). A standalone executable with no runtime dependencies.
+Prebuilt binaries for Windows, macOS, and Linux will be published on the [Releases page](https://github.com/donrami/PenOpt/releases). Until then you'll need to build from source.
 
 ### Build from Source
 
@@ -68,20 +68,20 @@ On Linux, install Wails system dependencies (`libgtk-3-dev`, `libwebkit2gtk-4.0-
 
 ## Quick Start
 
-1. **Load a mesh** -- drag-and-drop an STL or OBJ file onto the drop zone.
-2. **Select a material** -- pick from the NIST XCOM database (40+ materials, category tabs, search).
-3. **Set beam energy** -- enter kV and optional pre-filter (Cu, Al, Sn, Ti).
-4. **Configure scanner** -- choose a preset (Nikon, GE, Zeiss, …) or set SDD, SOD, detector manually.
-5. **Choose a weight preset** -- Quality, Balanced, or Energy.
-6. **Click Optimize** -- review the optimal orientation (θ, φ), kV recommendation, and IntelliScan projection schedule.
+1. **Load a mesh** - drag-and-drop an STL or OBJ file onto the drop zone.
+2. **Select a material** - pick from the NIST XCOM database (40+ materials, category tabs, search).
+3. **Set beam energy** - enter kV and optional pre-filter (Cu, Al, Sn, Ti).
+4. **Configure scanner** - choose a preset (Nikon, GE, Zeiss, …) or set SDD, SOD, detector manually.
+5. **Choose a weight preset** - Quality, Balanced, or Energy.
+6. **Click Optimize** - review the optimal orientation (θ, φ), kV recommendation, and IntelliScan projection schedule.
 
 ---
 
 ## What This Does
 
-PenOpt solves a concrete problem in industrial CT scanning: **which orientation should you scan a part in?** Given a 3D mesh, it casts X-rays through the geometry, evaluates five image-quality objectives over hundreds of orientations, and returns the optimal tilt (θ) and rotation (φ) angles. It also generates IntelliScan projection schedules and tells you what kV you'll need.
+Given a 3D mesh of a manufactured part, PenOpt casts simulated X-rays through the geometry at hundreds of orientations and picks the one that minimizes penetration, energy requirements, and cone-beam artifacts. It returns the optimal tilt (θ) and rotation (φ) angles, recommends a tube voltage (kV), and generates IntelliScan projection schedules.
 
-Built with [Wails v2](https://wails.io/) -- Go backend with BVH-accelerated ray casting, Three.js/WebGL frontend.
+Built with [Wails v2](https://wails.io/) - Go backend with BVH-accelerated ray casting, Three.js/WebGL frontend.
 
 ---
 
@@ -108,11 +108,15 @@ Built with [Wails v2](https://wails.io/) -- Go backend with BVH-accelerated ray 
 
 ### In Depth
 
-- **Materials & Physics** -- NIST XCOM attenuation database for 40+ materials, polyenergetic effective energy using 120-point spectrum integration, pre-filter presets with flux ratio and HVL-Cu computation, kV recommendation with qualitative guidance (Low / Medium / High)
-- **Scanner Configuration** -- 13 industrial and medical CT presets, full manual control of SDD, SOD, detector dimensions, and pixel count
-- **Visualization** -- Per-face penetration heatmap, score contour plot with search boundary overlay, penetration rose (optimal vs. worst orientation), optional 3D cone-beam diagram, compare mode with ghost overlay
-- **IntelliScan** -- Computes unique tangent-ray projection angles from rotated face normals. Reports reduction vs. full 360° coverage with scan time estimate. Copy angles or export as JSON.
-- **UI** -- Dark theme (Inter + JetBrains Mono), material filter tabs with live search, real-time progress ring with orientation HUD, keyboard shortcuts, session persistence across restarts
+The NIST XCOM material database covers 40+ materials with energy-dependent attenuation coefficients. The polyenergetic effective energy calculation uses 120-point spectrum integration, and the kV recommendation includes qualitative guidance (Low / Medium / High) based on your material and max path length.
+
+PenOpt ships with 13 industrial and medical CT presets (Nikon, GE, Zeiss, Siemens, Philips, dental CBCT). You can also set SDD, SOD, detector dimensions and resolution manually.
+
+Visualization includes per-face penetration heatmaps, score contour plots with search boundary overlay, and a penetration rose comparing optimal vs. worst orientations. There's also an optional 3D cone-beam diagram and a compare mode with ghost overlay to see the default orientation side-by-side with the optimal one.
+
+The IntelliScan feature computes unique tangent-ray projection angles from rotated face normals and reports the reduction vs. a full 360° scan with a time estimate. Angles can be copied or exported as JSON.
+
+The UI uses a dark theme with Inter and JetBrains Mono, material filter tabs with live search, a real-time progress ring with orientation HUD, keyboard shortcuts, and session persistence across restarts.
 
 ---
 
@@ -124,11 +128,11 @@ After running PenOpt with the **Balanced** weight preset and **medium ray sampli
 
 - **Optimal orientation:** θ = 12°, φ = 340°
 - **Maximum path length (f_energy):** reduced to ~52 mm (≈ 40 % reduction)
-- **kV recommendation:** 450 kV (High) -- confirmed sufficient for the reduced path
+- **kV recommendation:** 450 kV (High) - confirmed sufficient for the reduced path
 - **IntelliScan:** 14 tangent-ray projections identified, covering 92 % of faces (Tuy-Smith completeness)
 - **Scan time estimate:** ~30 % of a full 360° acquisition
 
-This example illustrates the typical workflow. Actual results depend on geometry, material, and scanner configuration. *(Quantitative validation against real CT data is planned -- see [Validation](#validation).)*
+Actual results depend on geometry, material, and scanner configuration. Quantitative validation against real CT data is planned (see [Validation](#validation)).
 
 ---
 
@@ -142,7 +146,7 @@ Drag-and-drop or click the drop zone to open the file dialog. Supports STL (bina
 
 ### 2. Configure material
 
-Pick a material from the NIST XCOM database using the category tabs (All / Metallic / Non-Metallic) or the search field. Set beam energy (keV) and minimum transmission (Tmin) -- the effective energy after filtering is computed live.
+Pick a material from the NIST XCOM database using the category tabs (All / Metallic / Non-Metallic) or the search field. Set beam energy (keV) and minimum transmission (Tmin) - the effective energy after filtering is computed live.
 
 ### 3. Configure scan
 
@@ -150,13 +154,13 @@ Choose a scanner preset or set SDD, SOD, detector dimensions, and pixels manuall
 
 ### 4. Set optimization parameters
 
-- **Quality / Balanced / Energy presets** -- choose how to combine objectives (minimax or weighted)
-- **Ray Sampling slider** -- lower values (4×4) for fast preview, higher (32×32) for accurate results
-- **Search Range slider** -- narrow (±30°) for focused search, wide (±75°) for comprehensive coverage
+- **Quality / Balanced / Energy presets** - choose how to combine objectives (minimax or weighted)
+- **Ray Sampling slider** - lower values (4×4) for fast preview, higher (32×32) for accurate results
+- **Search Range slider** - narrow (±30°) for focused search, wide (±75°) for comprehensive coverage
 
 ### 5. Run optimization
 
-Click **Optimize** in the sidebar or viewport header. The search runs asynchronously -- progress is shown as a ring overlay, percentage, and live orientation label (θ, φ). Stop the search at any time.
+Click **Optimize** in the sidebar or viewport header. The search runs asynchronously - progress is shown as a ring overlay, percentage, and live orientation label (θ, φ). Stop the search at any time.
 
 ### 6. Review results
 
@@ -186,7 +190,7 @@ Save results as JSON for programmatic use, or as a PNG screenshot with summary o
 
 ## How It Works
 
-PenOpt searches over two angles -- tilt θ (rotation around X) and rotation φ (rotation around Y) -- evaluating ray casting results at each candidate orientation:
+PenOpt searches over two angles - tilt θ (rotation around X) and rotation φ (rotation around Y) - evaluating ray casting results at each candidate orientation:
 
 1. **Rotate** the mesh by θ and φ.
 2. **Cast rays** from the X-ray source through a ray grid at N projection angles, traversing the BVH to find all intersections and measure path length through solid material.
@@ -201,20 +205,20 @@ PenOpt searches over two angles -- tilt θ (rotation around X) and rotation φ (
 
 ## Validation
 
-**⏳ In progress.** Quantitative validation against real CT scan data is planned. The following are on the roadmap:
+Quantitative validation against real CT scan data is planned. The following are on the roadmap:
 
 - Comparison of PenOpt-predicted optimal orientations against orientations selected by experienced CT operators for a reference set of industrial parts
 - Monte Carlo (MC) simulation cross-check of penetration path lengths for selected geometries
 - Reproducibility assessment: variance of optimal orientation across ray sampling resolutions
 - kV recommendation accuracy vs. real tube loading trials
 
-Current accuracy estimates are based on synthetic ray-casting benchmarks (see [Performance](#performance)). Contributions of validation data are welcome.
+Current accuracy estimates are based on synthetic ray-casting benchmarks (see [Performance](#performance)). Contributions of validation data are welcome - if you have CT scans with known ground truth, get in touch.
 
 ---
 
 ## Limitations
 
-- **Single-material only.** PenOpt models a homogeneous part. Multi-material assemblies (e.g., embedded inserts, coatings, bimetallic structures) are not yet supported -- penetration values for such parts are approximate.
+- **Single-material only.** PenOpt models a homogeneous part. Multi-material assemblies (e.g., embedded inserts, coatings, bimetallic structures) are not yet supported - penetration values for such parts are approximate.
 - **Non-watertight meshes.** Open edges cause X-rays to pass through gaps, underestimating true path length. A warning is shown when boundary edges are detected.
 - **No beam-hardening correction.** The current objective set does not include an f_bh term (planned). Polyenergetic effects are approximated via effective energy only.
 - **Single-objective scalarization.** The weighted-sum / minimax approach collapses multiple objectives into a single score. Pareto-front exploration (NSGA-II) is planned for multi-objective trade-off analysis.
@@ -233,7 +237,7 @@ Current accuracy estimates are based on synthetic ray-casting benchmarks (see [P
 | **BVH build time** | < 1 s for typical industrial parts (< 500k triangles) | Median-split, single-threaded |
 | **Hardware** | CPU only, multi-core | Ray casting parallelized across goroutines; no GPU required |
 
-**⏳ Detailed benchmarks across representative geometries coming soon.**
+Detailed benchmarks across representative geometries will be added once the validation dataset is ready.
 
 ---
 
@@ -247,7 +251,7 @@ If you use PenOpt in your research, please cite:
   title = {PenOpt: CT Scan Orientation Optimizer},
   year = {2026},
   url = {https://github.com/donrami/PenOpt},
-  doi = {10.5281/zenodo.XXXXXXX}  % ⏳ DOI pending
+  doi = {10.5281/zenodo.XXXXXXX}  % DOI pending
 }
 ```
 
@@ -272,19 +276,19 @@ For the underlying methodology, see the [References](#references) section.
 
 ## References
 
-- **Ito, T. et al. (2020)** -- "Optimization of X-ray CT scanning orientation for additive manufactured parts using ray casting." *Precision Engineering*, 64, 232–240.
-- **Butzhammer, L. et al. (2026)** -- Tangent-ray selection for cone-beam CT. *Internal research reference.*
-- **Lifton, J. & Poon, E. (2023)** -- IntelliScan adaptive projection allocation.
-- **NIST XCOM** -- Photon Cross Sections Database.
+- **Ito, T. et al. (2020)** - "Optimization of X-ray CT scanning orientation for additive manufactured parts using ray casting." *Precision Engineering*, 64, 232–240.
+- **Butzhammer, L. et al. (2026)** - Tangent-ray selection for cone-beam CT. *Internal research reference.*
+- **Lifton, J. & Poon, E. (2023)** - IntelliScan adaptive projection allocation.
+- **NIST XCOM** - Photon Cross Sections Database.
 
 ---
 
 ## Roadmap
 
-- [ ] **f_bh implementation** -- polyenergetic beam-hardening objective replacing the current placeholder
-- [ ] **NSGA-II multi-objective optimization** -- Pareto-front exploration instead of scalarized weights
-- [ ] **Adaptive ray grid** -- projection count dynamically allocated based on orientation variance
-- [ ] **Results history** -- persist and compare multiple optimization runs
+- [ ] **f_bh implementation** - polyenergetic beam-hardening objective replacing the current placeholder
+- [ ] **NSGA-II multi-objective optimization** - Pareto-front exploration instead of scalarized weights
+- [ ] **Adaptive ray grid** - projection count dynamically allocated based on orientation variance
+- [ ] **Results history** - persist and compare multiple optimization runs
 
 ---
 
@@ -293,7 +297,7 @@ For the underlying methodology, see the [References](#references) section.
 ```
 penopt/
 ├── main.go                    # Wails v2 entry point
-├── app.go                     # Thin composition layer -- Go packages to frontend bindings
+├── app.go                     # Thin composition layer - Go packages to frontend bindings
 ├── wails.json                 # Wails configuration
 ├── frontend/                  # Three.js/WebGL single-page app (Vite 5)
 │   ├── src/
