@@ -1,6 +1,6 @@
 // Optimizer — search lifecycle, progress, results, IntelliScan, heatmap loading
 import { S, $, qsa, DEG, WEIGHT_PRESETS, TUBE_BIAS_BAND_KV, TUBE_COMFORT_MARGIN_KV, showError, setStatus, invalidateResults, clearStaleResults } from './state.js';
-import { applyHeatmap, animateRotation, invalidateHeatmapCache } from './scene.js';
+import { applyHeatmap, animateRotation } from './scene.js';
 import { recalcBeam } from './materials.js';
 import { RunOptimization, ComputeFaceHeatmap, CalcEnergyRecommendation, SaveFile } from '../wailsjs/go/main/App';
 import { drawContourPlot, drawPenetrationRose, setupContourHover, setupRoseHover } from './plots.js';
@@ -85,7 +85,6 @@ export function runOptimization() {
       S.result = result;
       // Fresh results — clear stale state
       clearStaleResults();
-      invalidateHeatmapCache();
       showResults(result);
       renderIntelliScan(result);
       // Redraw rose with IntelliScan ticks
