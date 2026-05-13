@@ -1,6 +1,6 @@
 // Package search implements the coarse→fine grid search for optimal orientation.
-// Based on Ito et al. 2020 §2.4: discretize (θ, φ) at 10° intervals, find top 3,
-// then refine at 1° intervals around each candidate.
+// Based on Ito et al. 2020 §2.4: discretize (θ, φ) at 15° intervals (deviation from paper's
+// 10° for speed — evaluates ~50% of the coarse orientations). Find top 3, then refine at 1°.
 package search
 
 import (
@@ -77,6 +77,7 @@ type OrientationRaw struct {
 	FTuyRaw          float64
 	FBhRaw           float64
 	MaxPerProjection []float64
+	CoverageFraction float64   // fraction of rays that intersected the mesh
 }
 
 // Result holds the full optimization result.
@@ -99,6 +100,18 @@ type Result struct {
 	MismatchNote        string              `json:"mismatchNote,omitempty"`
 	// T3.2: reference orientation comparison
 	ReferenceOrientation *OrientationScore  `json:"referenceOrientation,omitempty"`
+	// Coverage detection
+	MinCoverageFraction float64 `json:"minCoverageFraction"`          // lowest across all evaluated orientations
+	CoverageWarning     string  `json:"coverageWarning,omitempty"`    // warning if undersampled
+	// Auto-sizing for small-part handling (set by app/optimizer.go)
+	AutoRayGrid int     `json:"autoRayGrid,omitempty"`   // auto-selected grid size based on part extent
+	ExtentRatio float64 `json:"extentRatio,omitempty"`   // part full extent / detector width
+	// Face-centroid fallback sampling
+	SamplingMethod string `json:"samplingMethod,omitempty"` // "grid" or "face-centroid"
+	// Convergence metrics
+	ScoreGap        float64 `json:"scoreGap"`               // difference between best and 2nd-best score
+	Top3Spread      float64 `json:"top3Spread"`             // max angular distance among top 3 (degrees)
+	ConvergenceNote string  `json:"convergenceNote,omitempty"` // human-readable note
 }
 
 // EvaluateSingle evaluates a single orientation (for UI preview / heatmap).
@@ -160,6 +173,32 @@ func Run(bvhTree *bvh.BVH, m *mesh.Mesh, cfg raycaster.ScannerConfig,
 		searchRange = 75
 	}
 
+	// Decide sampling method: face-centroid for very small parts where grid undersamples.
+	// Face-centroid is expensive (1 ray per face per projection), so it's only used:
+	// - For the FINE phase only (coarse phase always uses grid-based sampling)
+	// - When part fits in <3 inter-ray cells AND mesh has <3000 triangles
+	// - With greatly reduced projections (8 instead of 18)
+	// Larger small parts rely on the auto-sized grid for adequate sampling until
+	// mesh simplification is implemented.
+	useFaceCentroidFine := false
+	useFaceCentroidCoarse := false
+	if m != nil {
+		partExtent := math.Max(m.Extent().X, math.Max(m.Extent().Y, m.Extent().Z))
+		interRaySpacing := cfg.DetWidth / float64(cfg.RayGridX)
+		isSmallPart := (partExtent * 2) < interRaySpacing*3
+		isLowPoly := m.NumTris < 3000
+		if isSmallPart && isLowPoly {
+			// Low-poly tiny part: use face-centroid for accuracy
+			useFaceCentroidFine = true
+			cfg.NumProjections = min(cfg.NumProjections, 8)
+		} else if isSmallPart && !isLowPoly {
+			// Small but dense part: grid-based with auto-size takes care of it.
+			// A 32×32 grid (1024 rays) at 36 proj = 37k rays vs 20k-face face-centroid
+			// at 18 proj = 360k rays — grid is 10× cheaper per orientation.
+			// The frontend will interpolate missing face values for the heatmap.
+		}
+	}
+
 	// ── Phase 1: Coarse search ──
 	coarseThetas, coarsePhis := generateSearchGrid(searchRange)
 	coarseOrientations := make([]Orient, 0, len(coarseThetas)*len(coarsePhis))
@@ -171,7 +210,7 @@ func Run(bvhTree *bvh.BVH, m *mesh.Mesh, cfg raycaster.ScannerConfig,
 
 	coarseStart := time.Now()
 	grid := raycaster.ComputeRayGrid(cfg)
-	coarseRaws := evaluateOrientationsRaw(bvhTree, m, coarseOrientations, cfg, grid, onProgress, 0, len(coarseOrientations))
+	coarseRaws := evaluateOrientationsRaw(bvhTree, m, coarseOrientations, cfg, grid, onProgress, 0, len(coarseOrientations), useFaceCentroidCoarse)
 	coarseTime := time.Since(coarseStart).Seconds() * 1000
 
 	if len(coarseRaws) < 2 {
@@ -269,7 +308,7 @@ func Run(bvhTree *bvh.BVH, m *mesh.Mesh, cfg raycaster.ScannerConfig,
 
 	fineStart := time.Now()
 	fineGrid := raycaster.ComputeRayGrid(fineCfg)
-	fineRaws := evaluateOrientationsRaw(bvhTree, m, fineOrientations, fineCfg, fineGrid, onProgress, len(coarseOrientations), len(coarseOrientations)+len(fineOrientations))
+	fineRaws := evaluateOrientationsRaw(bvhTree, m, fineOrientations, fineCfg, fineGrid, onProgress, len(coarseOrientations), len(coarseOrientations)+len(fineOrientations), useFaceCentroidFine)
 	fineTime := time.Since(fineStart).Seconds() * 1000
 
 	// ── Combine results and globally normalize ──
@@ -351,11 +390,77 @@ func Run(bvhTree *bvh.BVH, m *mesh.Mesh, cfg raycaster.ScannerConfig,
 		}
 	}
 
+	// ── Convergence metrics ──
+	var scoreGap float64
+	var top3Spread float64
+	var convergenceNote string
+	if len(allScores) >= 2 {
+		// ScoreGap = difference between best and second-best normalized score
+		scoreGap = allScores[1].Score - allScores[bestIdx].Score
+		if scoreGap < 0 {
+			scoreGap = 0
+		}
+	}
+	if len(allScores) >= 3 {
+		// Find top 3 distinct orientations by score
+		top3 := []OrientationScore{allScores[bestIdx]}
+		for _, s := range allScores {
+			if len(top3) >= 3 {
+				break
+			}
+			if s.Theta != allScores[bestIdx].Theta || s.Phi != allScores[bestIdx].Phi {
+				top3 = append(top3, s)
+			}
+		}
+		if len(top3) >= 3 {
+			// Max angular distance among top 3
+			maxDist := 0.0
+			for i := 0; i < 3; i++ {
+				for j := i + 1; j < 3; j++ {
+					d := angularDistance(top3[i].Theta, top3[i].Phi, top3[j].Theta, top3[j].Phi)
+					if d > maxDist {
+						maxDist = d
+					}
+				}
+			}
+			top3Spread = maxDist
+		}
+	}
+	if scoreGap < 0.01 {
+		convergenceNote = "Best and runner-up are nearly tied. Consider the top 2 orientations."
+	}
+	if top3Spread > 10 {
+		note := fmt.Sprintf("Top 3 orientations span %.0f° — multiple local optima found.", top3Spread)
+		if convergenceNote != "" {
+			convergenceNote += " " + note
+		} else {
+			convergenceNote = note
+		}
+	}
+
 	// ── T3.2: Reference orientation (θ=0°, φ=0°) ──
 	var refOrientation *OrientationScore
 	if bvhTree != nil {
 		refScore := EvaluateSingle(bvhTree, m, 0, 0, fineCfg)
 		refOrientation = &refScore
+	}
+
+	// ── Coverage detection across all evaluations ──
+	minCov := 1.0
+	for _, r := range allRaws {
+		if r.CoverageFraction < minCov {
+			minCov = r.CoverageFraction
+		}
+	}
+	var coverageWarning string
+	if minCov < 0.05 {
+		coverageWarning = fmt.Sprintf(
+			"Only %.1f%% of rays intersected the part. Consider increasing ray grid resolution or using a scanner with smaller detector.",
+			minCov*100)
+	} else if minCov < 0.20 {
+		coverageWarning = fmt.Sprintf(
+			"Ray coverage is low (%.1f%% of rays hit the part). Results may be less reliable for fine features.",
+			minCov*100)
 	}
 
 	res := &Result{
@@ -373,6 +478,16 @@ func Run(bvhTree *bvh.BVH, m *mesh.Mesh, cfg raycaster.ScannerConfig,
 		CoarseFineMismatch:  coarseFineMismatch,
 		MismatchNote:        mismatchNote,
 		ReferenceOrientation: refOrientation,
+		MinCoverageFraction: minCov,
+		CoverageWarning:     coverageWarning,
+		ScoreGap:            scoreGap,
+		Top3Spread:          top3Spread,
+		ConvergenceNote:     convergenceNote,
+	}
+
+	res.SamplingMethod = "grid"
+	if useFaceCentroidFine {
+		res.SamplingMethod = "face-centroid-fine"
 	}
 
 	return res, nil
@@ -386,12 +501,18 @@ func evaluateOrientationsRaw(bvhTree *bvh.BVH, m *mesh.Mesh,
 	orientations []Orient,
 	cfg raycaster.ScannerConfig,
 	grid raycaster.RayGrid,
-	onProgress ProgressFn, baseIdx, total int) []OrientationRaw {
+	onProgress ProgressFn, baseIdx, total int,
+	useFaceCentroid bool) []OrientationRaw {
 
 	raws := make([]OrientationRaw, 0, len(orientations))
 
 	for i, o := range orientations {
-		result := raycaster.ComputeTransmissionLengths(o.Theta, o.Phi, bvhTree, cfg, grid)
+		var result raycaster.OrientationResult
+		if useFaceCentroid && m != nil {
+			result = raycaster.ComputeTransmissionLengthsFaceCentroid(o.Theta, o.Phi, m, bvhTree, cfg)
+		} else {
+			result = raycaster.ComputeTransmissionLengths(o.Theta, o.Phi, bvhTree, cfg, grid)
+		}
 		fMtl := objectives.FMtl(result.Lengths, 3)
 		fEnergy := objectives.FEnergy(result.Lengths)
 		fHdn := objectives.FHdn(result.MaxPerProjection)
@@ -414,6 +535,7 @@ func evaluateOrientationsRaw(bvhTree *bvh.BVH, m *mesh.Mesh,
 			FTuyRaw:          fTuy,
 			FBhRaw:           fBh,
 			MaxPerProjection: result.MaxPerProjection,
+			CoverageFraction: result.CoverageFraction,
 		})
 
 		// Report progress
@@ -452,4 +574,12 @@ func globalScoreAndNormalize(raws []OrientationRaw,
 
 	return objectives.CombinedScore(fMtlVals, fEnergyVals, fHdnVals, fTuyVals, fBhVals,
 		weights[0], weights[1], weights[2], weights[3], weights[4], method)
+}
+
+// angularDistance returns the Euclidean distance between two orientations in (θ, φ) space.
+// Not true great-circle distance but adequate for small-angle comparisons within the search range.
+func angularDistance(t1, p1, t2, p2 float64) float64 {
+	dt := t1 - t2
+	dp := p1 - p2
+	return math.Sqrt(dt*dt + dp*dp)
 }

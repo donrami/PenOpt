@@ -59,20 +59,15 @@ func FHdn(maxPerProjection []float64) float64 {
 	return aMax - aMin
 }
 
-// FTuy computes the Tuy-Smith completeness for a set of orientations.
-// It returns the fraction of faces that satisfy the Tuy condition for each orientation.
-// Higher is better.
-// Note: This function expects a slice of Tuy completeness values (one per orientation)
-// computed externally (e.g., via search.ComputeTuyCompleteness).
+// FTuy inverts Tuy-Smith completeness for minimization.
+// f_fdk = 1 - completeness, where completeness is the fraction of faces
+// satisfying the Tuy-Smith condition. Lower fTuy = better (Ito 2020 §2.2).
 func FTuy(values []float64) []float64 {
-	// We return the values as-is because they are already in [0,1] and higher is better.
-	// However, we might want to invert it if we want to minimize (like other objectives).
-	// But note: in the optimization, we want to maximize Tuy completeness.
-	// Since our scoring minimizes the score, we will invert it in the calling code
-	// or use (1 - tuy) as the objective to minimize.
-	// For now, we return the values and let the caller decide how to use them.
-	// We'll document that the caller should use (1 - tuy) if they want to minimize.
-	return values
+	result := make([]float64, len(values))
+	for i, v := range values {
+		result[i] = 1.0 - v
+	}
+	return result
 }
 
 // FBh computes a beam-hardening metric.
@@ -124,7 +119,8 @@ func CombinedScore(fMtlVals, fEnergyVals, fHdnVals, fTuyVals, fBhVals []float64,
 	nFMtl := Normalize(fMtlVals)
 	nFEnergy := Normalize(fEnergyVals)
 	nFHdn := Normalize(fHdnVals)
-	nFTuy := Normalize(fTuyVals)
+	// Invert Tuy completeness before normalizing so lower = better in the minimising score
+	nFTuy := Normalize(FTuy(fTuyVals))
 	nFBh := Normalize(fBhVals)
 
 	scores := make([]float64, n)

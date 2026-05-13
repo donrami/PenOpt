@@ -4,7 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"time"
+
+	goruntime "runtime"
 
 	"penopt/internal/raycaster"
 	"penopt/internal/search"
@@ -40,9 +43,25 @@ func (opt *Optimizer) Run(ctx context.Context, req RunRequest) (string, error) {
 	}
 
 	coarseCfg := raycaster.DefaultScannerConfig()
-	// T2.1: use ray grid override from frontend if provided
+
+	// T2.1: auto-size ray grid based on part extent vs detector size
 	coarseRayGrid := 8
-	if req.RayGridXY > 0 {
+	if m != nil && req.RayGridXY <= 0 {
+		partExtent := math.Max(m.Extent().X, math.Max(m.Extent().Y, m.Extent().Z))
+		extentRatio := (partExtent * 2) / coarseCfg.DetWidth // full extent / detector width
+		switch {
+		case extentRatio > 0.50:
+			coarseRayGrid = 8
+		case extentRatio > 0.25:
+			coarseRayGrid = 12
+		case extentRatio > 0.10:
+			coarseRayGrid = 16
+		case extentRatio > 0.05:
+			coarseRayGrid = 24
+		default:
+			coarseRayGrid = 32
+		}
+	} else if req.RayGridXY > 0 {
 		coarseRayGrid = req.RayGridXY
 	}
 	coarseCfg.RayGridX = coarseRayGrid
@@ -69,18 +88,26 @@ func (opt *Optimizer) Run(ctx context.Context, req RunRequest) (string, error) {
 				})
 			}, req.RayGridXY, req.SearchRange)
 
-		if result != nil && m != nil {
-			// T3.1: pass SOD/SDD for cone-beam IntelliScan correction
-			is := search.ComputeIntelliScanAngles(m, result.BestOrientation.Theta, result.BestOrientation.Phi,
-				coarseCfg.SOD, coarseCfg.SDD)
-			result.IntelliScan = &is
-		}
-
 		if err != nil || result == nil {
 			runtime.EventsEmit(ctx, "search:done", map[string]interface{}{
 				"error": fmt.Sprintf("Search failed: %v", err),
 			})
 			return
+		}
+
+		// Surface auto-sizing decision on the result
+		if m != nil && req.RayGridXY <= 0 {
+			partExtent := math.Max(m.Extent().X, math.Max(m.Extent().Y, m.Extent().Z))
+			extentRatio := (partExtent * 2) / coarseCfg.DetWidth
+			result.AutoRayGrid = coarseRayGrid
+			result.ExtentRatio = extentRatio
+		}
+
+		if m != nil {
+			// T3.1: pass SOD/SDD for cone-beam IntelliScan correction
+			is := search.ComputeIntelliScanAngles(m, result.BestOrientation.Theta, result.BestOrientation.Phi,
+				coarseCfg.SOD, coarseCfg.SDD)
+			result.IntelliScan = &is
 		}
 
 		data, err := json.Marshal(result)
@@ -94,6 +121,15 @@ func (opt *Optimizer) Run(ctx context.Context, req RunRequest) (string, error) {
 		runtime.EventsEmit(ctx, "search:done", map[string]interface{}{
 			"result": string(data),
 		})
+
+		// Diagnostic: log goroutine count to detect leaks
+		nproc := goruntime.NumGoroutine()
+		if nproc > 50 {
+			println("[diag]", nproc, "goroutines after search — possible leak")
+		}
+
+		// Controlled GC after search to prevent sporadic later spikes
+		goruntime.GC()
 	}()
 
 	return "started", nil

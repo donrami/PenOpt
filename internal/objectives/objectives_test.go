@@ -86,6 +86,30 @@ func TestNormalize_AllEqual(t *testing.T) {
 	}
 }
 
+func TestFTuy_Inversion(t *testing.T) {
+	input := []float64{1.0, 0.8, 0.5, 0.0}
+	got := FTuy(input)
+	want := []float64{0.0, 0.2, 0.5, 1.0}
+	for i := range got {
+		if math.Abs(got[i]-want[i]) > 1e-10 {
+			t.Errorf("FTuy[%d] = %v, want %v", i, got[i], want[i])
+		}
+	}
+}
+
+func TestFMtl_KnownGeometry(t *testing.T) {
+	// For a perfect parallel beam through a 100mm cube face-on,
+	// every ray penetrates exactly 100mm. fMtl (m=3) = 100mm.
+	lengths := make([]float64, 64)
+	for i := range lengths {
+		lengths[i] = 100.0
+	}
+	got := FMtl(lengths, 3)
+	if math.Abs(got-100.0) > 0.01 {
+		t.Errorf("FMtl(all 100mm) = %.4f, want 100.0", got)
+	}
+}
+
 func TestCombinedScore_Weighted(t *testing.T) {
 	fMtl := []float64{1, 2, 3}
 	fEnergy := []float64{4, 5, 6}

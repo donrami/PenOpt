@@ -243,4 +243,79 @@ func TestPenetrationCubeVsSphere(t *testing.T) {
 	}
 }
 
+func TestCoverageFraction_SmallPart(t *testing.T) {
+	// A tiny mesh on a large detector at coarse grid should produce low coverage
+	m := buildCubeMesh(0.5) // 1mm cube (size=0.5 → half-extent 0.5, full extent 1mm)
+	bvhTree := bvh.Build(m)
+	cfg := DefaultScannerConfig() // default 400mm detector
+	cfg.RayGridX = 8
+	cfg.RayGridY = 8
+	cfg.NumProjections = 8
+
+	grid := ComputeRayGrid(cfg)
+	result := ComputeTransmissionLengths(0, 0, bvhTree, cfg, grid)
+
+	if result.CoverageFraction > 0.1 {
+		t.Errorf("Small part on coarse grid: coverage = %.4f, expected < 0.1", result.CoverageFraction)
+	}
+}
+
+func TestCoverageFraction_ZeroCoverage(t *testing.T) {
+	// With an empty mesh, coverage should be exactly 0.
+	m := mesh.NewMesh()
+	bvhTree := bvh.Build(m)
+	cfg := DefaultScannerConfig()
+	cfg.RayGridX = 8
+	cfg.RayGridY = 8
+	cfg.NumProjections = 4
+
+	grid := ComputeRayGrid(cfg)
+	result := ComputeTransmissionLengths(0, 0, bvhTree, cfg, grid)
+
+	if result.CoverageFraction != 0.0 {
+		t.Errorf("Empty mesh: coverage = %.4f, expected 0.0", result.CoverageFraction)
+	}
+}
+
+func TestCoverageFraction_NonZeroForNormalMesh(t *testing.T) {
+	// A reasonably sized part should have some non-zero coverage on a fine grid
+	m := buildCubeMesh(60.0) // 120mm cube
+	bvhTree := bvh.Build(m)
+	cfg := DefaultScannerConfig()
+	cfg.RayGridX = 32
+	cfg.RayGridY = 32
+	cfg.NumProjections = 4
+
+	grid := ComputeRayGrid(cfg)
+	result := ComputeTransmissionLengths(0, 0, bvhTree, cfg, grid)
+
+	if result.CoverageFraction <= 0.0 {
+		t.Errorf("120mm cube on 32x32 grid: coverage = %.4f, expected > 0", result.CoverageFraction)
+	}
+	t.Logf("120mm cube at 32x32: coverage = %.4f", result.CoverageFraction)
+}
+
+func TestCoverageFraction_SmallVsLarge(t *testing.T) {
+	// A small part should have lower coverage than a large part
+	small := buildCubeMesh(2.0)   // 4mm cube
+	large := buildCubeMesh(100.0) // 200mm cube
+	smallBVH := bvh.Build(small)
+	largeBVH := bvh.Build(large)
+	cfg := DefaultScannerConfig()
+	cfg.RayGridX = 8
+	cfg.RayGridY = 8
+	cfg.NumProjections = 4
+
+	grid := ComputeRayGrid(cfg)
+	smallResult := ComputeTransmissionLengths(0, 0, smallBVH, cfg, grid)
+	largeResult := ComputeTransmissionLengths(0, 0, largeBVH, cfg, grid)
+
+	if smallResult.CoverageFraction >= largeResult.CoverageFraction {
+		t.Errorf("Small part coverage (%.4f) should be less than large part coverage (%.4f)",
+			smallResult.CoverageFraction, largeResult.CoverageFraction)
+	}
+}
+
+
+
 
