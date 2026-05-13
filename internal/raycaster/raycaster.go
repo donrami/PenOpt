@@ -401,12 +401,15 @@ func ComputeFacePenetrations(m *mesh.Mesh, bvhTree *bvh.BVH,
 	}
 
 	// Face-centroid fallback: comprehensive but slower
-	// Scale projection count based on mesh size
-	numProjections := 90
-	if numFaces > 100000 {
-		numProjections = 36
-	} else if numFaces > 50000 {
-		numProjections = 54
+	// Use NumProjections from config if set, otherwise scale by mesh size
+	numProjections := cfg.NumProjections
+	if numProjections <= 0 {
+		numProjections = 90
+		if numFaces > 100000 {
+			numProjections = 36
+		} else if numFaces > 50000 {
+			numProjections = 54
+		}
 	}
 	faceMax := make([]float64, numFaces)
 

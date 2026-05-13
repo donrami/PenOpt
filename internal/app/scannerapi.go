@@ -57,7 +57,11 @@ func (sa *ScannerAPI) ComputeFaceHeatmap(theta, phi float64) string {
 	}
 
 	cfg := raycaster.DefaultScannerConfig()
-	cfg.NumProjections = 90
+	// Force face-centroid sampling for the heatmap (grid misses too many faces).
+	// Use 8 projections — comprehensive per-face coverage in ~5s for a 20k face mesh.
+	cfg.RayGridX = 0
+	cfg.RayGridY = 0
+	cfg.NumProjections = 8
 
 	faceData := raycaster.ComputeFacePenetrations(m, bvhTree, theta, phi, cfg)
 	data, _ := json.Marshal(faceData)
