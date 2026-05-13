@@ -1,8 +1,8 @@
 # ── Project-specific artifacts ──────────────────────────────
-_tooling/                      # Agent tooling & planning artifacts
-.pi/                           # Pi agent configuration
-frontend/wailsjs/              # Wails auto-generated Go→JS bindings
-frontend/dist/                 # Vite frontend build output
+_tooling/
+.pi/
+frontend/wailsjs/
+frontend/dist/
 
 # ── Build output ────────────────────────────────────────────
 build/bin/
@@ -10,7 +10,7 @@ build/*/bin/
 
 # ── Dependencies ────────────────────────────────────────────
 node_modules/
-vendor/                        # Go vendor (if used)
+vendor/
 
 # ── Secrets & credentials ────────────────────────────────────
 .env
@@ -44,3 +44,6 @@ Thumbs.db
 
 # ── Local overrides ──────────────────────────────────────────
 .githooks/
+
+# ── Agent-facing docs (internal use only) ───────────────────
+CONTEXT.md

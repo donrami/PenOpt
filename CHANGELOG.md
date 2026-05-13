@@ -26,4 +26,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - STL and OBJ mesh parser with watertight validation
 - Wails v2 desktop application with Go backend and Three.js/WebGL frontend
 
-[0.1.0]: https://github.com/rami-abu-hamad/penopt/releases/tag/v0.1.0
+[0.1.0]: https://github.com/donrami/PenOpt/releases/tag/v0.1.0
