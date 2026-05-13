@@ -24,15 +24,15 @@ export function initScene() {
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(w, h);
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.0;
+  renderer.toneMapping = THREE.ReinhardToneMapping;
+  renderer.toneMappingExposure = 1.2;
   c.appendChild(renderer.domElement);
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true; controls.dampingFactor = 0.08; controls.target.set(0, 0, 0);
   controls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN };
   controls.touches = { ONE: THREE.TOUCH.ROTATE_PAN, TWO: THREE.TOUCH.DOLLY_PAN };
-  scene.add(new THREE.AmbientLight(0x404060, 1.0));
-  scene.add(new THREE.HemisphereLight(0x6088cc, 0x302040, 0.4));
+  scene.add(new THREE.AmbientLight(0x8888cc, 1.2));
+  scene.add(new THREE.HemisphereLight(0x88aadd, 0x554466, 0.6));
   const d1 = new THREE.DirectionalLight(0xffffff, 0.9); d1.position.set(200, 300, 400); scene.add(d1);
   const d2 = new THREE.DirectionalLight(0x6688cc, 0.35); d2.position.set(-200, -100, -300); scene.add(d2);
   const grid = new THREE.GridHelper(800, 20, 0x2a2d3e, 0x1e2130);
@@ -177,9 +177,12 @@ export function applyHeatmap() {
         vSum[ic] += val; vCount[ic]++;
       }
       // Per-vertex averaged value → color (GPU interpolates across triangle for smooth gradient)
+      // High-contrast heatmap: deep blue → cyan → yellow → bright red
       function valToColor(norm) {
-        if (norm <= 0.5) { const t = norm / 0.5; return [30 + t * 200, 180 - t * 130, 40 - t * 30]; }
-        else { const t = (norm - 0.5) / 0.5; return [230 + t * 25, 50 - t * 40, 10 - t * 8]; }
+        if (norm <= 0.25) { const t = norm / 0.25; return [20 + t * 60, 60 + t * 140, 140 + t * 40]; }
+        else if (norm <= 0.5) { const t = (norm - 0.25) / 0.25; return [80 + t * 140, 200 - t * 30, 180 - t * 120]; }
+        else if (norm <= 0.75) { const t = (norm - 0.5) / 0.25; return [220 - t * 20, 170 - t * 60, 60 + t * 40]; }
+        else { const t = (norm - 0.75) / 0.25; return [200 + t * 55, 110 - t * 80, 100 - t * 70]; }
       }
       for (let vi = 0; vi < numVerts; vi++) {
         const avg = vCount[vi] > 0 ? vSum[vi] / vCount[vi] : 0;
@@ -200,7 +203,7 @@ export function applyHeatmap() {
     const gCv = document.createElement('canvas'); gCv.width = 80; gCv.height = 8;
     const gCtx = gCv.getContext('2d');
     const grad = gCtx.createLinearGradient(0, 0, 80, 0);
-    grad.addColorStop(0, '#1eb848'); grad.addColorStop(0.5, '#f5c542'); grad.addColorStop(1, '#e82e1a');
+    grad.addColorStop(0, '#1448b0'); grad.addColorStop(0.33, '#14c8c8'); grad.addColorStop(0.66, '#f5a830'); grad.addColorStop(1, '#e82020');
     gCtx.fillStyle = grad; gCtx.fillRect(0, 0, 80, 8);
     $('legend-gradient').style.background = `url(${gCv.toDataURL()})`;
     $('heatmap-legend').classList.remove('hidden');
