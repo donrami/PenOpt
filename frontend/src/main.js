@@ -370,31 +370,33 @@ async function init() {
   $('idle-prompt').style.display = ''; setStatus('Ready — drop a mesh file');
 
 
-  // Results panel collapse toggle
+  // Results panel collapse toggle — hides panel entirely so viewport reclaims space
   const CHEV_DOWN = '<svg width="10" height="10" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M1 1l4 4 4-4"/></svg>';
   const CHEV_UP   = '<svg width="10" height="10" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" style="transform:rotate(180deg)" aria-hidden="true"><path d="M1 1l4 4 4-4"/></svg>';
 
   const resultsPanel = $('results-panel');
-  const resultsContent = $('results-content');
   const resultsCollapseBtn = $('results-collapse-btn');
   if (resultsCollapseBtn && resultsPanel) {
     // Apply persisted collapsed state
     if (S.resultsCollapsed) {
-      resultsContent.style.display = 'none';
+      resultsPanel.classList.add('collapsed');
       resultsCollapseBtn.innerHTML = CHEV_UP;
       resultsCollapseBtn.setAttribute('aria-label', 'Expand results');
     }
     resultsCollapseBtn.addEventListener('click', function() {
-      S.resultsCollapsed = resultsContent.style.display !== 'none';
-      resultsContent.style.display = S.resultsCollapsed ? 'none' : '';
+      S.resultsCollapsed = !resultsPanel.classList.contains('collapsed');
+      resultsPanel.classList.toggle('collapsed', S.resultsCollapsed);
       resultsCollapseBtn.innerHTML = S.resultsCollapsed ? CHEV_UP : CHEV_DOWN;
       resultsCollapseBtn.setAttribute('aria-label', S.resultsCollapsed ? 'Expand results' : 'Collapse results');
       try { localStorage.setItem('penopt-results-collapsed', S.resultsCollapsed ? '1' : ''); } catch (_) {}
+      // Notify viewport resize so Three.js canvas re-adjusts
+      requestAnimationFrame(function() { resizeViewport(); });
     });
     // Persist across sessions
     try {
       if (localStorage.getItem('penopt-results-collapsed') === '1') {
         S.resultsCollapsed = true;
+        resultsPanel.classList.add('collapsed');
       }
       var savedRange = localStorage.getItem('penopt-search-range');
       if (savedRange !== null) {

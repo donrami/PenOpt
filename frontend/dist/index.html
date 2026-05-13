@@ -8,8 +8,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <style>.hidden{display:none!important;visibility:hidden!important}.js-tooltip-active [data-tip]::after,.js-tooltip-active [data-tip]::before{display:none!important;content:none!important}</style>
-  <script type="module" crossorigin src="/assets/index.04f7b9d5.js"></script>
-  <link rel="stylesheet" href="/assets/index.f57fd255.css">
+  <script type="module" crossorigin src="/assets/index.5376d510.js"></script>
+  <link rel="stylesheet" href="/assets/index.49ad4f0c.css">
 </head>
 <body>
   <div id="app">
@@ -268,16 +268,12 @@
             <div class="ip-text">Drop your mesh here</div>
             <div class="ip-formats">STL (binary + ASCII) &middot; OBJ &middot; Max 200 MB</div>
           </div>
-        </div>
 
-        <!-- Progress ring overlay -->
-        <div id="progress-ring" class="hidden">
-          <svg class="pr-svg" viewBox="0 0 40 40">
-            <circle class="pr-track" cx="20" cy="20" r="16"/>
-            <circle class="pr-fill" id="pr-fill" cx="20" cy="20" r="16" stroke-dasharray="100.53" stroke-dashoffset="100.53"/>
-          </svg>
-          <span class="pr-pct" id="pr-pct">0%</span>
-          <div class="pr-info" id="pr-info">Evaluating orientations...</div>
+          <!-- Search overlay — darkens viewport and blocks interaction during search -->
+          <div id="vp-search-overlay" class="hidden">
+            <div class="spinner"></div>
+            <span>Optimizing…</span>
+          </div>
         </div>
 
         <!-- Results Panel (40%) -->

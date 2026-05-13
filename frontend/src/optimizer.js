@@ -18,10 +18,17 @@ export function runOptimization() {
   // Show search UI
   $('btn-optimize').disabled = true; $('btn-optimize').innerHTML = '\u25B6 Searching...';
   $('vp-progress').classList.remove('hidden'); $('results-panel').classList.remove('hidden');
-  $('progress-ring').classList.remove('hidden'); $('hud-rot').classList.remove('hidden');
+  $('results-panel').classList.remove('collapsed');
+  // Sync collapse button state to expanded
+  var rcb = $('results-collapse-btn');
+  if (rcb) {
+    rcb.innerHTML = '<svg width="10" height="10" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M1 1l4 4 4-4"/></svg>';
+    rcb.setAttribute('aria-label', 'Collapse results');
+  }
+  $('vp-search-overlay').classList.remove('hidden');
+  clearResultsContent();
   $('os-dot').className = 'os-dot os-dot--searching'; $('os-text').textContent = 'Searching...';
   $('progress-fill').style.width = '0%';
-  $('pr-fill').style.strokeDashoffset = '100.53';
   setStatus('Grid search in progress...');
 
   const w = WEIGHT_PRESETS[S.weightPreset];
@@ -38,16 +45,12 @@ export function runOptimization() {
         var d = S._lastProgressData;
         if (!d) return;
         $('progress-fill').style.width = d.pct + '%';
-        $('pr-pct').textContent = Math.round(d.pct) + '%';
         $('progress-label').textContent = Math.round(d.pct) + '%';
-        $('pr-info').textContent = d.label || 'Evaluating...';
         var thetaMatch = d.label?.match(/θ=([\d.]+)/);
         var phiMatch = d.label?.match(/φ=([\d.]+)/);
         if (thetaMatch && phiMatch) {
           $('hud-rot').innerHTML = '\u03B8: ' + thetaMatch[1] + '\u00B0 \u03C6: ' + phiMatch[1] + '\u00B0';
         }
-        var offset = 100.53 - (d.pct / 100) * 100.53;
-        $('pr-fill').style.strokeDashoffset = Math.max(0, offset);
       });
     }
   });
@@ -62,7 +65,6 @@ export function runOptimization() {
 
     if (data.error) {
       showError('Optimization error: ' + data.error);
-      $('progress-ring').classList.add('hidden');
       finishSearch();
       return;
     }
@@ -80,12 +82,10 @@ export function runOptimization() {
       if (bestProj && bestProj.length >= 2 && result.intelliScan) {
         drawPenetrationRose(bestProj, worstProj, result.isPartial, null, result.intelliScan.angles);
       }
-      $('progress-ring').classList.add('hidden');
       loadHeatmap(result);
 
     } catch (err) {
       showError('Result parse error: ' + err.message);
-      $('progress-ring').classList.add('hidden');
     }
     finishSearch();
   });
@@ -96,7 +96,6 @@ export function runOptimization() {
       if (!S.searchCancel) showError('Failed to start search: ' + err);
       runtime.EventsOff('search:progress');
       runtime.EventsOff('search:done');
-      $('progress-ring').classList.add('hidden');
       finishSearch();
     });
 }
@@ -105,6 +104,7 @@ function finishSearch() {
   S.searching = false;
   $('btn-optimize').disabled = false; $('btn-optimize').innerHTML = '\u25B6 <span>Optimize</span>';
   $('vp-progress').classList.add('hidden'); $('hud-rot').classList.add('hidden');
+  $('vp-search-overlay').classList.add('hidden');
   $('os-dot').className = 'os-dot os-dot--ready';
   $('os-text').textContent = S.searchCancel ? 'Cancelled' : 'Complete';
   setStatus(S.searchCancel ? 'Search cancelled' : 'Optimization complete');
@@ -114,6 +114,57 @@ function finishSearch() {
 }
 
 export function cancelSearch() { S.searchCancel = true; setStatus('Cancelling...'); }
+
+// Clear previous result content to avoid flash of stale data on new search
+function clearResultsContent() {
+  // Reset result summary elements
+  var angleEl = $('rs-angle'); if (angleEl) angleEl.textContent = '--';
+  var energyEl = $('rs-energy'); if (energyEl) energyEl.textContent = '--';
+  var fmtlEl = $('rs-fmtl'); if (fmtlEl) { fmtlEl.textContent = '--'; fmtlEl.style.color = ''; }
+  var fenergyEl = $('rs-fenergy'); if (fenergyEl) { fenergyEl.textContent = '--'; fenergyEl.style.color = ''; }
+  var tuyEl = $('rs-tuy'); if (tuyEl) { tuyEl.textContent = '--'; tuyEl.style.color = ''; }
+  var evalsEl = $('rs-evals'); if (evalsEl) evalsEl.textContent = '';
+
+  // Clear optimal orientation card
+  var optAngles = $('opt-angles'); if (optAngles) optAngles.textContent = '--';
+  var optBody = $('opt-table-body'); if (optBody) optBody.innerHTML = '';
+
+  // Remove dynamically-created result elements
+  var scoreGap = $('rs-score-gap'); if (scoreGap) scoreGap.remove();
+  var tuyWarn = $('tuy-warning'); if (tuyWarn) tuyWarn.remove();
+
+  // Clear energy card
+  var energyVal = $('energy-val'); if (energyVal) energyVal.textContent = '--';
+  var energyQual = $('energy-qual'); if (energyQual) energyQual.innerHTML = '';
+  var energySavings = $('energy-savings'); if (energySavings) energySavings.textContent = '';
+  var energyCaveat = $('energy-caveat'); if (energyCaveat) energyCaveat.textContent = '';
+
+  // Hide IntelliScan card
+  var isCard = $('card-intelliscan'); if (isCard) isCard.style.display = 'none';
+
+  // Reset tradeoff card to disabled state
+  var tradeoffCard = $('card-tradeoff');
+  if (tradeoffCard) {
+    tradeoffCard.classList.add('tradeoff-disabled');
+    var tradeoffStatus = $('tradeoff-status');
+    if (tradeoffStatus) tradeoffStatus.style.display = 'block';
+    // Deactivate all tradeoff stops except the first
+    var stops = tradeoffCard.querySelectorAll('.tradeoff-stop');
+    stops.forEach(function(s, i) { s.classList.toggle('active', i === 0); });
+  }
+
+  // Reset plot canvases (clear them so old plots don't linger)
+  var contourCanvas = $('canvas-contour');
+  if (contourCanvas) {
+    var ctx = contourCanvas.getContext('2d');
+    if (ctx) ctx.clearRect(0, 0, contourCanvas.width, contourCanvas.height);
+  }
+  var roseCanvas = $('canvas-rose');
+  if (roseCanvas) {
+    var ctx = roseCanvas.getContext('2d');
+    if (ctx) ctx.clearRect(0, 0, roseCanvas.width, roseCanvas.height);
+  }
+}
 
 function showResults(result) {
   const best = result.bestOrientation, worst = result.worstOrientation;
@@ -249,6 +300,12 @@ function showResults(result) {
   // Results visible
   S.facePenetrations = null;
   $('results-panel').classList.remove('hidden');
+  $('results-panel').classList.remove('collapsed');
+  var rcb = $('results-collapse-btn');
+  if (rcb) {
+    rcb.innerHTML = '<svg width="10" height="10" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M1 1l4 4 4-4"/></svg>';
+    rcb.setAttribute('aria-label', 'Collapse results');
+  }
 }
 
 // ── IntelliScan ──
@@ -282,7 +339,7 @@ function renderIntelliScan(result) {
   if (geoMode === 'cone-beam') {
     infoHtml += ' For wide-angle cone-beam systems, consider verifying critical angles manually.';
   }
-  html += '<div class="is-info" style="margin-top:6px;padding:4px 6px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.15);border-radius:4px;font-size:9px;color:var(--text-dim);line-height:1.4">' + infoHtml + '</div>';
+  html += '<div class="is-info">' + infoHtml + '</div>';
   body.innerHTML = html;
 
   var cb = document.getElementById('is-copy-btn');
@@ -408,7 +465,7 @@ export function setupTradeoff() {
   if (!document.getElementById('bh-placeholder-note')) {
     var bhNote = document.createElement('div');
     bhNote.id = 'bh-placeholder-note';
-    bhNote.style.cssText = 'margin-top:4px;font-size:9px;color:var(--text-dim);line-height:1.3';
+    bhNote.className = 'bh-note';
     bhNote.textContent = 'Note: Beam-hardening optimization (fBh) coming in a future release. Weight redistributed to Tuy-Smith completeness.';
     var tradeoffOpts = document.querySelector('.tradeoff-options');
     if (tradeoffOpts) { tradeoffOpts.after(bhNote); }

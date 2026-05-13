@@ -160,12 +160,18 @@
                   <option value="custom">Custom / Default</option>
                 </select>
                 <div class="scanner-grid">
-                  <label>SDD (mm) <input type="number" id="cfg-sdd" value="1000" min="100" max="5000" step="50" /></label>
-                  <label>SOD (mm) <input type="number" id="cfg-sod" value="700" min="50" max="5000" step="50" /></label>
-                  <label>Det. W (mm) <input type="number" id="cfg-detw" value="400" min="10" max="2000" step="20" /></label>
-                  <label>Det. H (mm) <input type="number" id="cfg-deth" value="400" min="10" max="2000" step="20" /></label>
-                  <label>Pixels X <input type="number" id="cfg-px" value="1024" min="64" max="4096" /></label>
-                  <label>Pixels Y <input type="number" id="cfg-py" value="1024" min="64" max="4096" /></label>
+                  <label for="cfg-sdd">SDD (mm)</label>
+                  <input type="number" id="cfg-sdd" value="1000" min="100" max="5000" step="50" />
+                  <label for="cfg-sod">SOD (mm)</label>
+                  <input type="number" id="cfg-sod" value="700" min="50" max="5000" step="50" />
+                  <label for="cfg-detw">Det. W (mm)</label>
+                  <input type="number" id="cfg-detw" value="400" min="10" max="2000" step="20" />
+                  <label for="cfg-deth">Det. H (mm)</label>
+                  <input type="number" id="cfg-deth" value="400" min="10" max="2000" step="20" />
+                  <label for="cfg-px">Pixels X</label>
+                  <input type="number" id="cfg-px" value="1024" min="64" max="4096" />
+                  <label for="cfg-py">Pixels Y</label>
+                  <input type="number" id="cfg-py" value="1024" min="64" max="4096" />
                 </div>
                 <!-- T2.1: Ray Sampling slider -->
                 <div class="ctrl-group mt-2">
@@ -198,8 +204,6 @@
           </div>
         </section>
 
-        <!-- Error banner (sidebar bottom) -->
-        <div id="sidebar-error" class="hidden"></div>
       </aside>
 
       <!-- ─── VIEWPORT + RESULTS (60/40 split) ─── -->
@@ -266,16 +270,12 @@
             <div class="ip-text">Drop your mesh here</div>
             <div class="ip-formats">STL (binary + ASCII) &middot; OBJ &middot; Max 200 MB</div>
           </div>
-        </div>
 
-        <!-- Progress ring overlay -->
-        <div id="progress-ring" class="hidden">
-          <svg class="pr-svg" viewBox="0 0 40 40">
-            <circle class="pr-track" cx="20" cy="20" r="16"/>
-            <circle class="pr-fill" id="pr-fill" cx="20" cy="20" r="16" stroke-dasharray="100.53" stroke-dashoffset="100.53"/>
-          </svg>
-          <span class="pr-pct" id="pr-pct">0%</span>
-          <div class="pr-info" id="pr-info">Evaluating orientations...</div>
+          <!-- Search overlay — darkens viewport and blocks interaction during search -->
+          <div id="vp-search-overlay" class="hidden">
+            <div class="spinner"></div>
+            <span>Optimizing…</span>
+          </div>
         </div>
 
         <!-- Results Panel (40%) -->
@@ -353,14 +353,14 @@
                 <div class="rc-body">
                   <div class="tradeoff-status" id="tradeoff-status">No results yet — run an optimization to adjust these settings.</div>
                   <div class="tradeoff-stops">
-                    <span class="tradeoff-stop active" data-w="0">Quality</span>
-                    <span class="tradeoff-stop" data-w="1">Balanced</span>
-                    <span class="tradeoff-stop" data-w="2">Energy</span>
+                    <button class="tradeoff-stop active" data-w="0" type="button">Quality</button>
+                    <button class="tradeoff-stop" data-w="1" type="button">Balanced</button>
+                    <button class="tradeoff-stop" data-w="2" type="button">Energy</button>
                   </div>
                   <div class="method-row">
                     <span class="method-label">Combine:</span>
-                    <span class="method-btn active" data-method="minimax">Minimax</span>
-                    <span class="method-btn" data-method="weighted">Weighted</span>
+                    <button class="method-btn active" data-method="minimax" type="button">Minimax</button>
+                    <button class="method-btn" data-method="weighted" type="button">Weighted</button>
                   </div>
                   <button class="btn btn-primary" id="btn-update-search" style="width:100%;margin-top:var(--sp-2)">Update Search</button>
                 </div>
