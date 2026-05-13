@@ -117,8 +117,10 @@ export function cancelSearch() { S.searchCancel = true; setStatus('Cancelling...
 
 function showResults(result) {
   const best = result.bestOrientation, worst = result.worstOrientation;
-  const bestScore = result.allScores.find(s => s.theta === best.theta && s.phi === best.phi);
-  const worstScore = result.allScores.find(s => s.theta === worst.theta && s.phi === worst.phi);
+  // Use epsilon comparison — Go JSON may produce 179.0000001 vs frontend 179
+  const matchOrientation = (a, b) => Math.abs(a.theta - b.theta) < 0.001 && Math.abs(a.phi - b.phi) < 0.001;
+  const bestScore = result.allScores.find(s => matchOrientation(s, best));
+  const worstScore = result.allScores.find(s => matchOrientation(s, worst));
   if (!bestScore || !worstScore) return;
 
   // Summary bar — plain language + directional indicators
@@ -159,13 +161,16 @@ function showResults(result) {
     if (!gapEl) {
       gapEl = document.createElement('div');
       gapEl.id = 'rs-score-gap';
-      gapEl.style.cssText = 'margin-top:4px;font-size:9px;color:var(--text-dim);';
       $('rs-evals').parentElement.appendChild(gapEl);
     }
     var gapPct = (result.scoreGap * 100).toFixed(1);
+    var isAmbiguous = result.scoreGap < 0.01 || (result.top3Spread || 0) > 10;
+    gapEl.style.cssText = 'margin-top:4px;font-size:9px;color:' + (isAmbiguous ? 'var(--amber-500)' : 'var(--text-dim)');
     var gapText = 'Score gap vs runner-up: ' + gapPct + '%';
     if (result.convergenceNote) {
       gapText += ' \u2014 ' + result.convergenceNote;
+    } else if (isAmbiguous) {
+      gapText += ' \u2014 Multiple orientations score similarly. The selected angle may not be uniquely optimal.';
     }
     gapEl.textContent = gapText;
   }
