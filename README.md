@@ -108,7 +108,7 @@ Built with [Wails v2](https://wails.io/) - Go backend with BVH-accelerated ray c
 
 ### In Depth
 
-The NIST XCOM material database covers 40+ materials with energy-dependent attenuation coefficients. The polyenergetic effective energy calculation uses 120-point spectrum integration, and the kV recommendation includes qualitative guidance (Low / Medium / High) based on your material and max path length.
+The NIST XCOM material database covers 40+ materials with energy-dependent attenuation coefficients. The polyenergetic effective energy calculation uses 120-point spectrum integration, and the kV recommendation shows the minimum tube voltage needed alongside the actual transmission margin (low / ample), tube feasibility check against the selected scanner's rated max kV, and the Tmin threshold that drove the recommendation.
 
 PenOpt ships with 13 industrial and medical CT presets (Nikon, GE, Zeiss, Siemens, Philips, dental CBCT). You can also set SDD, SOD, detector dimensions and resolution manually.
 
