@@ -31,11 +31,11 @@ export function initScene() {
   controls.enableDamping = true; controls.dampingFactor = 0.08; controls.target.set(0, 0, 0);
   controls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN };
   controls.touches = { ONE: THREE.TOUCH.ROTATE_PAN, TWO: THREE.TOUCH.DOLLY_PAN };
-  scene.add(new THREE.AmbientLight(0x8888cc, 1.2));
-  scene.add(new THREE.HemisphereLight(0x88aadd, 0x554466, 0.6));
+  scene.add(new THREE.AmbientLight(0x7a7d9e, 1.2));
+  scene.add(new THREE.HemisphereLight(0x8da8c3, 0x323041, 0.6));
   const d1 = new THREE.DirectionalLight(0xffffff, 0.9); d1.position.set(200, 300, 400); scene.add(d1);
   const d2 = new THREE.DirectionalLight(0x6688cc, 0.35); d2.position.set(-200, -100, -300); scene.add(d2);
-  const grid = new THREE.GridHelper(800, 20, 0x2a2d3e, 0x1e2130);
+  const grid = new THREE.GridHelper(800, 20, 0x272a3a, 0x202330);
   grid.material.transparent = true;
   grid.material.opacity = 0.6;
   scene.add(grid);
@@ -137,7 +137,7 @@ export function renderMesh(verts) {
   geo.setIndex(new THREE.BufferAttribute(idx, 1)); geo.computeVertexNormals(); geo.computeBoundingBox();
   const center = new THREE.Vector3(); geo.boundingBox.getCenter(center); geo.translate(-center.x, -center.y, -center.z);
   const mat = new THREE.MeshPhysicalMaterial({
-    color: 0x3b82f6,
+    color: 0x3a81f6,
     metalness: 0.35,
     roughness: 0.55,
     clearcoat: 0.15,
@@ -209,8 +209,8 @@ export function applyHeatmap() {
     $('heatmap-legend').classList.remove('hidden');
     if (S.result) { animateRotation(S.meshObject, S.result.bestOrientation.theta * DEG, S.result.bestOrientation.phi * DEG, 300); }
   } else {
-    if (Array.isArray(S.meshObject.material)) { S.meshObject.material.forEach(m => { m.color.setHex(0x3b82f6); m.vertexColors = false; m.needsUpdate = true; }); }
-    else { S.meshObject.material.color.setHex(0x3b82f6); S.meshObject.material.vertexColors = false; S.meshObject.material.needsUpdate = true; }
+    if (Array.isArray(S.meshObject.material)) { S.meshObject.material.forEach(m => { m.color.setHex(0x3a81f6); m.vertexColors = false; m.needsUpdate = true; }); }
+    else { S.meshObject.material.color.setHex(0x3a81f6); S.meshObject.material.vertexColors = false; S.meshObject.material.needsUpdate = true; }
   }
   S.renderScene?.();
 }
@@ -228,12 +228,12 @@ export function enterCompareMode() {
   S.meshObject.material.opacity = 1;
   S.meshObject.material.depthWrite = true;
   if (!S.meshObject.material.vertexColors) {
-    S.meshObject.material.color.setHex(0x3b82f6);
+    S.meshObject.material.color.setHex(0x3a81f6);
   }
   S.meshObject.material.needsUpdate = true;
 
   var ghostMat = S.meshObject.material.clone();
-  ghostMat.color.setHex(0xff6b35);
+  ghostMat.color.setHex(0x9b5f55);
   ghostMat.vertexColors = false;
   ghostMat.transparent = true;
   ghostMat.opacity = 0.35;
@@ -277,9 +277,9 @@ export function switchViewMode(mode) {
   exitCompareMode();
   if (mode === '3d' && S.meshObject) {
     if (Array.isArray(S.meshObject.material)) {
-      S.meshObject.material.forEach(function(m) { m.color.setHex(0x3b82f6); m.vertexColors = false; m.needsUpdate = true; });
+      S.meshObject.material.forEach(function(m) { m.color.setHex(0x3a81f6); m.vertexColors = false; m.needsUpdate = true; });
     } else {
-      S.meshObject.material.color.setHex(0x3b82f6); S.meshObject.material.vertexColors = false; S.meshObject.material.needsUpdate = true;
+      S.meshObject.material.color.setHex(0x3a81f6); S.meshObject.material.vertexColors = false; S.meshObject.material.needsUpdate = true;
     }
     if (S.result) { animateRotation(S.meshObject, S.result.bestOrientation.theta * DEG, S.result.bestOrientation.phi * DEG, 300); }
   }

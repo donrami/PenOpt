@@ -1,45 +1,47 @@
 /* ── PenOpt Design System v3 — Refactored ── */
 
 :root {
-  /* Background scale (dark grays, not pure black) */
-  --bg: #0c0e14;
-  --bg2: #13151e;
-  --bg3: #1a1d2b;
-  --surface: #1e2130;
-  --surface2: #252840;
-  --surface3: #2d3150;
+  /* Background scale — OKLCH, unified hue 275° (cool blue cast), systematic lightness steps */
+  --bg: oklch(16% 0.010 275);
+  --bg2: oklch(20% 0.015 275);
+  --bg3: oklch(24% 0.020 275);
+  --surface: oklch(26% 0.025 275);
+  --surface2: oklch(29% 0.030 275);
+  --surface3: oklch(33% 0.040 275);
 
   /* Border scale */
-  --border: #272a3d;
-  --border-light: #353850;
-  --border-strong: #454870;
+  --border: oklch(29% 0.030 275);
+  --border-light: oklch(35% 0.040 275);
+  --border-strong: oklch(42% 0.050 275);
 
   /* Text scale */
-  --text: #dde0ed;
-  --text-dim: #969ab0;
-  --text-muted: #8b90aa;
+  --text: oklch(91% 0.018 275);
+  --text-dim: oklch(69% 0.030 275);
+  --text-muted: oklch(66% 0.035 275);
 
-  /* Accent (blue) */
-  --accent: #3b82f6;
-  --color-info: #0891b2;
-  --color-info-tint: rgba(8, 145, 178, 0.12);
-  --accent-hover: #60a5fa;
-  --accent-tint: rgba(59, 130, 246, 0.08);
-  --accent-tint2: rgba(59, 130, 246, 0.15);
+  /* Accent (blue) — hue 260° for subtle contrast vs neutral 275° */
+  --accent: oklch(62% 0.190 260);
+  --accent-hover: oklch(71% 0.140 255);
+  --color-info: oklch(61% 0.110 222);
+
+  /* Tints — explicit OKLCH colors (no more rgba) */
+  --accent-tint: oklch(28% 0.045 268);
+  --accent-tint2: oklch(30% 0.057 265);
+  --color-info-tint: oklch(29% 0.040 248);
 
   /* Semantic colors */
-  --green-300: #6ee7b7;
-  --green-500: #34d399;
-  --green-700: #059669;
-  --green-tint: rgba(52, 211, 153, 0.1);
-  --red-300: #fca5a5;
-  --red-500: #ef4444;
-  --red-700: #b91c1c;
-  --red-tint: rgba(239, 68, 68, 0.1);
-  --amber-300: #fcd34d;
-  --amber-500: #f59e0b;
-  --amber-700: #d97706;
-  --amber-tint: rgba(245, 158, 11, 0.18);
+  --green-300: oklch(84% 0.130 165);
+  --green-500: oklch(77% 0.150 163);
+  --green-700: oklch(60% 0.127 163);
+  --green-tint: oklch(31% 0.028 226);
+  --red-300: oklch(81% 0.100 20);
+  --red-500: oklch(64% 0.210 25);
+  --red-700: oklch(50% 0.190 28);
+  --red-tint: oklch(28% 0.032 328);
+  --amber-300: oklch(88% 0.150 92);
+  --amber-500: oklch(77% 0.165 70);
+  --amber-700: oklch(67% 0.157 58);
+  --amber-tint: oklch(35% 0.030 69);
 
   /* Spacing scale (4px base) */
   --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px;
@@ -48,9 +50,9 @@
   /* Border radius */
   --radius-xs: 2px; --radius-sm: 4px; --radius-md: 6px; --radius-lg: 10px;
 
-  /* Typography */
-  --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --mono: 'JetBrains Mono', ui-monospace, monospace;
+  /* Typography — Geist + Geist Mono (anti-AI font choice, replacing Inter/JetBrains Mono) */
+  --font: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+  --mono: 'Geist Mono', ui-monospace, monospace;
   --lh-tight: 1.2;
   --lh-heading: 1.3;
   --lh-body: 1.6;
@@ -646,14 +648,14 @@ textarea:focus-visible {
   transition: opacity 200ms;
 }
 
-/* Stale Optimize buttons — orangish fill */
+/* Stale Optimize buttons — amber fill */
 .btn-stale {
-  background: #d97706 !important;
-  border-color: #f59e0b !important;
-  color: #fff !important;
+  background: var(--amber-700) !important;
+  border-color: var(--amber-500) !important;
+  color: var(--text) !important;
 }
 .btn-stale:hover:not(:disabled) {
-  background: #f59e0b !important;
+  background: var(--amber-500) !important;
 }
 
 /* ── ADVANCED CONTROLS ACCORDION ── */
@@ -1649,7 +1651,7 @@ textarea:focus-visible {
   appearance: none;
 }
 #btn-plot-expand-close:hover {
-  color: #fff;
+  color: var(--text);
   background: rgba(0, 0, 0, 0.65);
 }
 
