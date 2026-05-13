@@ -604,6 +604,79 @@ export function setupAccordion() {
   }
 }
 
+// ── Client-side re-scoring (Tradeoff card) ──
+
+function normalize(values) {
+  var n = values.length;
+  if (n === 0) return [];
+  var min = values[0], max = values[0];
+  for (var i = 1; i < n; i++) {
+    if (values[i] < min) min = values[i];
+    if (values[i] > max) max = values[i];
+  }
+  var range = max - min;
+  if (range === 0) {
+    var zeros = new Array(n);
+    for (var i = 0; i < n; i++) zeros[i] = 0;
+    return zeros;
+  }
+  var result = new Array(n);
+  for (var i = 0; i < n; i++) result[i] = (values[i] - min) / range;
+  return result;
+}
+
+function combinedScore(fMtlVals, fEnergyVals, fHdnVals, fTuyVals, fBhVals,
+    wMtl, wEnergy, wHdn, wTuy, wBh, method) {
+  var n = fMtlVals.length;
+  var nFMtl = normalize(fMtlVals);
+  var nFEnergy = normalize(fEnergyVals);
+  var nFHdn = normalize(fHdnVals);
+  // FTuy: invert (1 - value) before normalizing — matches Go
+  var fTuyInv = new Array(n);
+  for (var i = 0; i < n; i++) fTuyInv[i] = 1 - fTuyVals[i];
+  var nFTuy = normalize(fTuyInv);
+  var nFBh = normalize(fBhVals);
+  var scores = new Array(n);
+  if (method === 'minimax') {
+    for (var i = 0; i < n; i++) {
+      scores[i] = Math.max(wMtl * nFMtl[i], wEnergy * nFEnergy[i],
+        wHdn * nFHdn[i], wTuy * nFTuy[i], wBh * nFBh[i]);
+    }
+  } else {
+    for (var i = 0; i < n; i++) {
+      scores[i] = wMtl * nFMtl[i] + wEnergy * nFEnergy[i] +
+        wHdn * nFHdn[i] + wTuy * nFTuy[i] + wBh * nFBh[i];
+    }
+  }
+  return scores;
+}
+
+function rescoreAndDisplay(weights, method) {
+  if (!S.result || !S.result.allScores || S.result.allScores.length === 0) return;
+  var allScores = S.result.allScores;
+  var n = allScores.length;
+  var fMtlVals = new Array(n), fEnergyVals = new Array(n);
+  var fHdnVals = new Array(n), fTuyVals = new Array(n), fBhVals = new Array(n);
+  for (var i = 0; i < n; i++) {
+    fMtlVals[i] = allScores[i].fMtl;
+    fEnergyVals[i] = allScores[i].fEnergy;
+    fHdnVals[i] = allScores[i].fHdn;
+    fTuyVals[i] = allScores[i].fTuy !== undefined ? allScores[i].fTuy : 0;
+    fBhVals[i] = allScores[i].fBh || 0;
+  }
+  var newScores = combinedScore(fMtlVals, fEnergyVals, fHdnVals, fTuyVals, fBhVals,
+    weights.wMtl, weights.wEnergy, weights.wHdn, weights.wTuy, weights.wBh, method);
+  var bestIdx = 0, worstIdx = 0;
+  for (var i = 0; i < n; i++) {
+    allScores[i].score = newScores[i];
+    if (newScores[i] < newScores[bestIdx]) bestIdx = i;
+    if (newScores[i] > newScores[worstIdx]) worstIdx = i;
+  }
+  S.result.bestOrientation = allScores[bestIdx];
+  S.result.worstOrientation = allScores[worstIdx];
+  showResults(S.result);
+}
+
 // ── Tradeoff ──
 export function setupTradeoff() {
   qsa('.tradeoff-stop').forEach(el => {
@@ -611,7 +684,7 @@ export function setupTradeoff() {
       qsa('.tradeoff-stop').forEach(e => e.classList.remove('active'));
       el.classList.add('active');
       S.weightPreset = parseInt(el.dataset.w);
-      invalidateResults();
+      rescoreAndDisplay(WEIGHT_PRESETS[S.weightPreset], S.method);
     });
   });
   qsa('.method-btn').forEach(el => {
@@ -619,7 +692,7 @@ export function setupTradeoff() {
       qsa('.method-btn').forEach(e => e.classList.remove('active'));
       el.classList.add('active');
       S.method = el.dataset.method;
-      invalidateResults();
+      rescoreAndDisplay(WEIGHT_PRESETS[S.weightPreset], S.method);
     });
   });
   // Add fBh placeholder note below the preset buttons
@@ -633,20 +706,7 @@ export function setupTradeoff() {
   }
 
   $('btn-update-search').addEventListener('click', () => {
-    // Show loading state
-    const btn = $('btn-update-search');
-    btn.textContent = 'Updating...';
-    btn.style.opacity = '0.7';
-    // Re-run with new weights
-    runOptimization();
-    // Reset after results show
-    var checkDone = setInterval(function() {
-      if (!S.searching) {
-        btn.textContent = 'Update Search';
-        btn.style.opacity = '';
-        clearInterval(checkDone);
-      }
-    }, 500);
+    rescoreAndDisplay(WEIGHT_PRESETS[S.weightPreset], S.method);
   });
 }
 
