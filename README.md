@@ -6,7 +6,7 @@ A desktop application that finds the optimal orientation for industrial X-ray CT
 <!-- ![PenOpt UI](./docs/screenshot.png) -->
 
 [![Go 1.23+](https://img.shields.io/badge/Go-1.23+-00ADD8?style=flat-square&logo=go)](https://go.dev/dl/)
-[![Wails v2](https://img.shields.io/badge/Wails-v2-2.12-6e48d9?style=flat-square&logo=wails)](https://wails.io/)
+[![Wails v2](https://img.shields.io/badge/Wails-v2-2.12-6e48d9?style=flat-square)](https://wails.io/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 
 ## What This Does
