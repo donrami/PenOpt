@@ -57,7 +57,7 @@
         <section class="card" id="card-upload">
           <h2 class="card-head" aria-expanded="true"><svg class="card-icon" width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M7 1v9M3 5l4-4 4 4M2 10v2h10v-2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>Mesh <svg class="chevron" style="display:none" width="8" height="8" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l4 4 4-4"/></svg></h2>
           <div class="card-body">
-            <div id="drop-zone">
+            <div id="drop-zone" data-tip="Load a 3D mesh file (STL or OBJ, up to 200 MB). The mesh is centered at the origin and a BVH is built for fast ray casting.">
               <svg width="28" height="28" viewBox="0 0 14 14" fill="none"><path d="M7 1v9M3 5l4-4 4 4M2 10v2h10v-2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
               <div class="dz-label">Drop STL / OBJ</div>
               <div class="dz-formats">Binary/ASCII &middot; Up to 200 MB</div>
@@ -69,7 +69,7 @@
               <div class="fm-row"><span id="fm-bbox"></span></div>
               <div class="fm-row" id="fm-wt-row"><span class="dot-wrap" data-tip="Watertight"><span id="fm-dot" class="dot dot--green"></span></span><span id="fm-wt">watertight</span></div>
 
-              <button class="fm-remove" id="btn-remove">Remove</button>
+              <button class="fm-remove" id="btn-remove" data-tip="Remove current mesh and clear all results">Remove</button>
             </div>
           </div>
         </section>
@@ -79,9 +79,9 @@
           <h2 class="card-head" aria-expanded="true"><svg class="card-icon" width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true"><circle cx="5" cy="5" r="4" stroke="currentColor" stroke-width="1.3"/><path d="M8 8l4 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>Material<span class="mat-subtitle" id="mat-subtitle"></span> <svg class="chevron open" width="8" height="8" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l4 4 4-4"/></svg></h2>
           <div class="card-body" id="card-material-body">
             <div class="mat-tabs" id="mat-tabs">
-              <button class="mat-tab active" data-cat="all">All</button>
-              <button class="mat-tab" data-cat="M">Metallic</button>
-              <button class="mat-tab" data-cat="N">Non-Metallic</button>
+              <button class="mat-tab active" data-cat="all" data-tip="Show all materials from the NIST XCOM database (including additively manufactured variants)">All</button>
+              <button class="mat-tab" data-cat="M" data-tip="Metallic materials — higher X-ray attenuation, requires higher energy">Metallic</button>
+              <button class="mat-tab" data-cat="N" data-tip="Non-metallic materials — lower X-ray attenuation, requires less energy">Non-Metallic</button>
             </div>
             <div class="mat-search-wrap">
               <input id="mat-search" type="text" placeholder="Filter materials..." />
@@ -117,12 +117,12 @@
               </div>
               <div class="acc-body" id="acc-beam">
                 <div class="ctrl-group">
-                  <div class="ctrl-label"><span>Energy</span><span class="ctrl-val" id="disp-energy">76</span><span class="ctrl-unit">keV</span></div>
+                  <div class="ctrl-label" data-tip="X-ray beam energy (keV). Higher energy penetrates more material but reduces image contrast. Effective energy ≈ 0.40 × tube kV for an unfiltered beam."><span>Energy</span><span class="ctrl-val" id="disp-energy">76</span><span class="ctrl-unit">keV</span></div>
                   <input type="range" id="sl-energy" min="30" max="500" value="76" step="5" />
                   <div class="presets" id="presets-energy"></div>
                 </div>
                 <div class="ctrl-group">
-                  <div class="ctrl-label"><span>Min Transmission</span><span class="ctrl-val" id="disp-tmin" style="color:var(--green-500)">0.10</span><span class="ctrl-unit">%</span></div>
+                  <div class="ctrl-label" data-tip="Tmin — minimum fraction of incident X-rays that must transmit through the thickest path. Higher Tmin = better SNR but requires higher kV. Typical CT range: 0.05–0.50%."><span>Min Transmission</span><span class="ctrl-val" id="disp-tmin" style="color:var(--green-500)">0.10</span><span class="ctrl-unit">%</span></div>
                   <input type="range" id="sl-tmin" min="0.01" max="2" value="0.1" step="0.01" />
                   <div class="presets" id="presets-tmin"></div>
                 </div>
@@ -139,10 +139,10 @@
               <div class="acc-body" id="acc-filter">
                 <div class="filter-grid" id="filter-grid"></div>
                 <div class="filter-stats" id="filter-stats" hidden>
-                  <div class="fstat"><span class="fstat-v" id="fs-eeff">--</span><span class="fstat-l">E<sub>eff</sub></span></div>
-                  <div class="fstat"><span class="fstat-v" id="fs-shift">--</span><span class="fstat-l">Shift</span></div>
-                  <div class="fstat"><span class="fstat-v" id="fs-flux">--</span><span class="fstat-l">Flux</span></div>
-                  <div class="fstat"><span class="fstat-v" id="fs-hvl">--</span><span class="fstat-l">HVL Cu</span></div>
+                  <div class="fstat" data-tip="Effective beam energy after pre-filtering — mean energy of the filtered polyenergetic spectrum. Higher Eeff = harder beam."><span class="fstat-v" id="fs-eeff">--</span><span class="fstat-l">E<sub>eff</sub></span></div>
+                  <div class="fstat" data-tip="Beam-hardening shift — increase in effective energy from the filter absorbing low-energy photons preferentially."><span class="fstat-v" id="fs-shift">--</span><span class="fstat-l">Shift</span></div>
+                  <div class="fstat" data-tip="Flux ratio — fraction of original beam intensity transmitted through the filter. Lower flux = longer required exposure."><span class="fstat-v" id="fs-flux">--</span><span class="fstat-l">Flux</span></div>
+                  <div class="fstat" data-tip="Half-value layer, Cu (mm) — copper thickness needed to attenuate beam by 50%. Standard measure of beam hardness."><span class="fstat-v" id="fs-hvl">--</span><span class="fstat-l">HVL Cu</span></div>
                 </div>
               </div>
             </div>
@@ -155,33 +155,33 @@
                 <svg class="acc-chev" width="8" height="8" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l4 4 4-4"/></svg>
               </div>
               <div class="acc-body" id="acc-scanner">
-                <label class="scanner-preset-label">Scanner Preset</label>
-                <select id="scanner-preset">
+                <label class="scanner-preset-label" data-tip="Pre-configured CT scanner geometries with known tube specifications. Selecting a preset sets SDD, SOD, detector size and enables tube-limit checking.">Scanner Preset</label>
+                <select id="scanner-preset" data-tip="Select a pre-configured CT scanner. Custom allows manual entry of all geometry parameters.">
                   <option value="custom">Custom / Default</option>
                 </select>
                 <div class="scanner-grid">
-                  <label for="cfg-sdd">SDD (mm)</label>
+                  <label for="cfg-sdd" data-tip="Source-to-detector distance (mm) — from X-ray focal spot to detector plane. Affects geometric magnification.">SDD (mm)</label>
                   <input type="number" id="cfg-sdd" value="1000" min="100" max="5000" step="50" />
-                  <label for="cfg-sod">SOD (mm)</label>
+                  <label for="cfg-sod" data-tip="Source-to-object distance (mm) — from focal spot to part center. Affects magnification and cone-beam angle.">SOD (mm)</label>
                   <input type="number" id="cfg-sod" value="700" min="50" max="5000" step="50" />
-                  <label for="cfg-detw">Det. W (mm)</label>
+                  <label for="cfg-detw" data-tip="Active detector width (mm) — determines the lateral field of view.">Det. W (mm)</label>
                   <input type="number" id="cfg-detw" value="400" min="10" max="2000" step="20" />
-                  <label for="cfg-deth">Det. H (mm)</label>
+                  <label for="cfg-deth" data-tip="Active detector height (mm) — determines the vertical field of view.">Det. H (mm)</label>
                   <input type="number" id="cfg-deth" value="400" min="10" max="2000" step="20" />
-                  <label for="cfg-px">Pixels X</label>
+                  <label for="cfg-px" data-tip="Detector pixel columns — higher = finer angular sampling but larger data volume.">Pixels X</label>
                   <input type="number" id="cfg-px" value="1024" min="64" max="4096" />
-                  <label for="cfg-py">Pixels Y</label>
+                  <label for="cfg-py" data-tip="Detector pixel rows — higher = finer vertical sampling but larger data volume.">Pixels Y</label>
                   <input type="number" id="cfg-py" value="1024" min="64" max="4096" />
                 </div>
                 <!-- T2.1: Ray Sampling slider -->
                 <div class="ctrl-group mt-2">
-                  <div class="ctrl-label"><span>Ray Sampling</span><span class="ctrl-val" id="disp-raygrid">default</span></div>
+                  <div class="ctrl-label" data-tip="Ray grid resolution per axis. Higher = more rays per orientation for better accuracy at the cost of speed. Auto-default adapts to part size."><span>Ray Sampling</span><span class="ctrl-val" id="disp-raygrid">default</span></div>
                   <input type="range" id="sl-raygrid" min="4" max="32" step="4" value="0" />
                   <div class="ctrl-hint" id="disp-raygrid-hint">8×8 coarse / 16×16 fine (default)</div>
                 </div>
                 <!-- Search range control -->
                 <div class="ctrl-group mt-3">
-                  <div class="ctrl-label"><span>Search Range (±°)</span><span class="ctrl-val" id="disp-searchrange">45°</span></div>
+                  <div class="ctrl-label" data-tip="Maximum angular range for tilt (θ) and rotation (φ) in the coarse grid search. If the optimum lands within 5° of the boundary, extend this range."><span>Search Range (±°)</span><span class="ctrl-val" id="disp-searchrange">45°</span></div>
                   <input type="range" id="cfg-searchrange" min="30" max="75" step="5" value="45" />
                   <div class="ctrl-hint">Optimizer tilt/rotation limits. Extend range if optimum is near boundary.</div>
                 </div>
@@ -210,7 +210,7 @@
       <main id="viewport-area">
         <!-- Viewport header bar -->
         <div id="vp-header">
-          <button class="btn btn-primary" id="btn-optimize" disabled>&#x25B6; <span>Optimize</span></button>
+          <button class="btn btn-primary" id="btn-optimize" disabled data-tip="Run optimization search (Ctrl+Enter)">&#x25B6; <span>Optimize</span></button>
           <div class="vp-progress hidden" id="vp-progress">
             <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
             <span class="progress-label" id="progress-label">0%</span>
@@ -257,7 +257,7 @@
             <span class="ci-swatch ci-swatch--solid"></span> Optimal orientation
           </div>
           <!-- Watertight warning banner -->
-          <div id="wt-banner" class="hidden"></div>
+          <div id="wt-banner" class="hidden" data-tip="Non-watertight mesh — rays may pass through open edges, underestimating penetration"></div>
           <div id="vp-loading" class="hidden">
             <div class="spinner"></div>
             <span>Processing mesh...</span>
@@ -288,29 +288,29 @@
           </div>
           <div id="results-content">
             <div id="results-summary">
-              <div class="rs-item"><span class="rs-lbl">Optimal</span><span class="rs-val" id="rs-angle">--</span></div>
+              <div class="rs-item" data-tip="Tilt (θ) and rotation (φ) minimizing the combined objective score. θ tilts the part toward the detector; φ rotates it around the beam axis."><span class="rs-lbl">Optimal</span><span class="rs-val" id="rs-angle">--</span></div>
               <div class="rs-sep"></div>
-              <div class="rs-item"><span class="rs-lbl">Tube kV</span><span class="rs-val accent" id="rs-energy">--</span></div>
+              <div class="rs-item" data-tip="Minimum X-ray tube voltage (kV) needed to penetrate the thickest cross-section at this orientation, accounting for material attenuation and Tmin transmission requirement."><span class="rs-lbl">Tube kV</span><span class="rs-val accent" id="rs-energy">--</span></div>
               <div class="rs-sep"></div>
-              <div class="rs-item"><span class="rs-lbl">Mean Pen.</span><span class="rs-val" id="rs-fmtl">--</span></div>
+              <div class="rs-item" data-tip="f_mtl — Generalized cube-root mean of all X-ray path lengths through the part. Lower = less total material traversed, reducing scatter and beam-hardening artifacts."><span class="rs-lbl">Mean Pen.</span><span class="rs-val" id="rs-fmtl">--</span></div>
               <div class="rs-sep"></div>
-              <div class="rs-item"><span class="rs-lbl">Peak Path</span><span class="rs-val" id="rs-fenergy">--</span></div>
+              <div class="rs-item" data-tip="f_energy — Maximum single-ray path length (mm) at this orientation. Determines the required tube kV. Lower peak path enables lower-energy, higher-contrast scans."><span class="rs-lbl">Peak Path</span><span class="rs-val" id="rs-fenergy">--</span></div>
               <div class="rs-sep"></div>
-              <div class="rs-item"><span class="rs-lbl">Tuy</span><span class="rs-val" id="rs-tuy">--</span></div>
-              <div class="rs-item ms-auto"><span class="rs-lbl" id="rs-evals"></span></div>
+              <div class="rs-item" data-tip="Tuy-Smith completeness — % of mesh faces with at least one tangent projection angle. ≥90% is ideal; &lt;90% risks cone-beam artifacts in reconstruction (Ito 2020 §2.2)."><span class="rs-lbl">Tuy</span><span class="rs-val" id="rs-tuy">--</span></div>
+              <div class="rs-item ms-auto" data-tip="Total evaluated orientations during the coarse-to-fine grid search."><span class="rs-lbl" id="rs-evals"></span></div>
             </div>
             <div id="results-grid">
-              <div class="res-card">
+              <div class="res-card" data-tip="Best tilt (θ) and rotation (φ) angles with per-metric improvement vs the worst orientation.">
                 <h3 class="rc-head">Optimal Orientation</h3>
                 <div class="rc-body">
                   <div class="opt-angles" id="opt-angles">--</div>
                   <table class="opt-table" id="opt-table">
-                    <thead><tr><th>Metric</th><th>Worst</th><th>Optimal</th><th>&Delta;</th></tr></thead>
+                    <thead><tr><th>Metric</th><th>Worst</th><th data-tip="Objective value at the optimal orientation — lower is better for all metrics">Optimal</th><th data-tip="Relative change from worst to optimal (negative = improvement)">&Delta;</th></tr></thead>
                     <tbody id="opt-table-body"></tbody>
                   </table>
                 </div>
               </div>
-              <div class="res-card">
+              <div class="res-card" data-tip="Required tube voltage based on the peak penetration path, material attenuation (NIST XCOM), and polyenergetic spectrum integration.">
                 <h3 class="rc-head">Energy</h3>
                 <div class="rc-body">
                   <div class="energy-val" id="energy-val">--</div>
@@ -320,26 +320,26 @@
                   <div class="energy-tube-status" id="energy-tube-status"></div>
                   <div class="energy-savings" id="energy-savings"></div>
                   <div style="display:flex;gap:var(--sp-2);margin-top:var(--sp-2)">
-                    <button class="export-btn" id="btn-export">&#x2913; JSON</button>
-                    <button class="export-btn" id="btn-export-png">&#x2913; PNG</button>
+                    <button class="export-btn" id="btn-export" data-tip="Download full results as JSON — all orientation scores, IntelliScan angles, and metadata.">&#x2913; JSON</button>
+                    <button class="export-btn" id="btn-export-png" data-tip="Export viewport screenshot with results summary overlay as PNG.">&#x2913; PNG</button>
                   </div>
                   <div class="energy-caveat" id="energy-caveat"></div>
                 </div>
               </div>
 
               <!-- IntelliScan Card -->
-              <div class="res-card" id="card-intelliscan">
+              <div class="res-card" id="card-intelliscan" data-tip="Tangent-ray projection angles (Butzhammer 2026) — subset where the beam is edge-on to part surfaces, derived from face normals at the optimal orientation.">
                 <h3 class="rc-head">IntelliScan Angles</h3>
                 <div class="rc-body" id="intelliscan-body"></div>
               </div>
 
               <!-- Analysis Plots Card -->
-              <div class="res-card">
+              <div class="res-card" data-tip="Contour map of combined objective score across θ-φ space, plus a polar rose of max penetration per projection angle with IntelliScan ticks.">
                 <h3 class="rc-head">Analysis Plots</h3>
                 <div class="rc-body p-0">
                   <div class="plot-tabs">
-                    <button class="plot-tab active" data-plot="contour">Score Contour</button>
-                    <button class="plot-tab" data-plot="rose">Penetration Rose</button>
+                    <button class="plot-tab active" data-plot="contour" data-tip="2D heatmap of combined objective score across tilt (θ) and rotation (φ) space — darker = better">Score Contour</button>
+                    <button class="plot-tab" data-plot="rose" data-tip="Polar plot of maximum X-ray path length per projection angle — shows directional penetration distribution">Penetration Rose</button>
                   </div>
                   <div class="plot-content active" id="plot-contour">
                     <canvas id="canvas-contour"></canvas>
@@ -351,18 +351,18 @@
               </div>
 
               <!-- Tradeoff Card -->
-              <div class="res-card" id="card-tradeoff">
+              <div class="res-card" id="card-tradeoff" data-tip="Re-rank all evaluated orientations with different weight presets without re-running the optimization.">
                 <h3 class="rc-head">Quality vs Energy</h3>
                 <div class="rc-body">
                   <div class="tradeoff-stops">
-                    <button class="tradeoff-stop active" data-w="0" type="button">Quality</button>
-                    <button class="tradeoff-stop" data-w="1" type="button">Balanced</button>
-                    <button class="tradeoff-stop" data-w="2" type="button">Energy</button>
+                    <button class="tradeoff-stop active" data-w="0" type="button" data-tip="Prioritize penetration uniformity: w_mtl=0.5, w_energy=0.2 — reduces scatter and beam-hardening artifacts.">Quality</button>
+                    <button class="tradeoff-stop" data-w="1" type="button" data-tip="Equal weight between quality and energy: w_mtl=0.3, w_energy=0.3 — balanced trade-off.">Balanced</button>
+                    <button class="tradeoff-stop" data-w="2" type="button" data-tip="Prioritize energy reduction: w_energy=0.5, w_mtl=0.2 — minimizes required kV at the cost of penetration uniformity.">Energy</button>
                   </div>
                   <div class="method-row">
                     <span class="method-label">Combine:</span>
-                    <button class="method-btn active" data-method="minimax" type="button">Minimax</button>
-                    <button class="method-btn" data-method="weighted" type="button">Weighted</button>
+                    <button class="method-btn active" data-method="minimax" type="button" data-tip="Score = worst-case weighted objective. Prevents any single metric from being critically poor — recommended for robust orientation selection.">Minimax</button>
+                    <button class="method-btn" data-method="weighted" type="button" data-tip="Score = weighted sum of all normalized objectives. Allows trade-off between metrics but risks unbalanced results.">Weighted</button>
                   </div>
                 </div>
               </div>
@@ -383,25 +383,23 @@
       <div id="help-card">
         <div class="help-head"><span id="help-title">Help &amp; Documentation</span><button id="btn-help-close" aria-label="Close help">&times;</button></div>
         <div class="help-body" id="help-body">
-            <h3>Overview</h3>
-            <p>PenOpt finds the optimal tilt (θ) and rotation (φ) angles for scanning a part in an X-ray CT system. It casts rays through your 3D mesh, evaluates three objectives per orientation, and returns the best angles plus a kV recommendation.</p>
+            <h3>Quick Start</h3>
+            <p>Drop a mesh (STL or OBJ), pick a material from the NIST XCOM database, set your scanner geometry and beam energy. Then click Optimize.</p>
+            <p>The search runs a coarse 15° grid, then refines the top candidates at 1° (Ito 2020 §2.4). It returns the optimal tilt (θ) and rotation (φ), a kV recommendation, and a Tuy completeness score.</p>
+            <p>Hover any metric or control for a deeper explanation.</p>
 
-            <h3>How It Works</h3>
-            <p><strong>1.</strong> Upload an STL or OBJ mesh. The app centers it at the origin and builds a BVH for fast ray casting.</p>
-            <p><strong>2.</strong> Pick a material from the NIST XCOM database (40+ options). Set beam energy and minimum transmission (Tmin).</p>
-            <p><strong>3.</strong> Choose a scanner preset or configure SDD, SOD, and detector geometry manually. Optionally add a beam pre-filter.</p>
-            <p><strong>4.</strong> Select a weight preset (Quality / Balanced / Energy) and scoring method (Minimax / Weighted). Adjust the search range.</p>
-            <p><strong>5.</strong> Click Optimize. A coarse 15° grid is searched first, then the top 3 candidates are refined at 1° resolution.</p>
-            <p><strong>6.</strong> Review the results: optimal angles, energy recommendation, Tuy completeness warning, score contour plot, and penetration rose.</p>
-            <p><strong>7.</strong> Export as JSON (full data) or PNG (screenshot with summary).</p>
+            <h3>Reading the Results</h3>
+            <p>θ tilts the part toward the detector and φ rotates it around the beam axis. Together they minimize the longest rays through the part — those are your optimal angles.</p>
+            <p><strong>kV recommendation</strong> — the app calculates this from the peak path, your material’s XCOM attenuation, and the polyenergetic spectrum. The margin line in the Energy card accounts for spectrum model uncertainty. Add 10–30 kV of headroom if your tube allows.</p>
+            <p><strong>Tuy completeness</strong> — the fraction of mesh faces that have at least one tangent projection angle. Below 90%, expect cone-beam artifacts during reconstruction. Extending the search range can help if the optimum is near a boundary.</p>
+            <p><strong>Quality vs Energy</strong> — Quality prioritizes penetration uniformity for less scatter. Energy cuts kV instead. Toggle the presets to see which ranking works better for your scan — no re-optimization needed.</p>
+            <p><strong>IntelliScan</strong> — finds the minimum projection angles needed to cover every surface. Fewer angles means shorter scan times (Butzhammer 2026).</p>
 
-            <h3>Objective Functions</h3>
-            <ul>
-              <li><strong>f<sub>mtl</sub></strong> — Generalized mean of X-ray path lengths (m=3, cube-root). Lower = less artifact from thick cross-sections.</li>
-              <li><strong>f<sub>energy</sub></strong> — Maximum path length. Determines the required X-ray tube voltage.</li>
-              <li><strong>f<sub>hdn</sub></strong> — Range of max path lengths across projections. Lower = more isotropic ray coverage.</li>
-            </ul>
-            <p><em>Note: Tuy-Smith completeness is tracked and shown as a warning when below 90%. Beam-hardening (f_bh) is planned for a future release.</em></p>
+            <h3>When to Worry</h3>
+            <p><strong>Tuy below 90%</strong> — expect cone-beam artifacts. Extend the search range or adjust the orientation.</p>
+            <p><strong>Non-watertight mesh</strong> — rays escape through open edges, so penetration reads lower than reality. Fix the mesh gap in your CAD tool.</p>
+            <p><strong>Beam-hardening</strong> — not modeled in the optimizer yet. Use the pre-filter panel to estimate effective energy (E<sub>eff</sub>) manually.</p>
+            <p>Scatter is not modeled in the optimizer. The objective is purely geometric — real scans will have additional noise.</p>
 
             <h3>Keyboard Shortcuts</h3>
             <ul>
@@ -413,6 +411,19 @@
               <li><kbd>F</kbd> — Toggle fullscreen</li>
             </ul>
           </div>
+      </div>
+    </div>
+
+    <!-- Plot expanded-view modal -->
+    <div id="plot-overlay" class="hidden" role="dialog" aria-modal="true" aria-labelledby="plot-expand-title">
+      <div id="plot-expand-card">
+        <div class="plot-expand-head">
+          <span id="plot-expand-title">Score Contour — θ vs φ</span>
+          <button id="btn-plot-expand-close" aria-label="Close plot">&times;</button>
+        </div>
+        <div class="plot-expand-body">
+          <canvas id="canvas-expanded"></canvas>
+        </div>
       </div>
     </div>
   </div>
