@@ -1282,7 +1282,7 @@ textarea:focus-visible {
 #card-tradeoff.tradeoff-disabled .tradeoff-status { display: block; }
 #card-tradeoff.tradeoff-disabled .tradeoff-stops,
 #card-tradeoff.tradeoff-disabled .method-row,
-#card-tradeoff.tradeoff-disabled #btn-update-search { opacity: 0.4; pointer-events: none; }
+
 
 .method-row { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-2); }
 .method-label { font-size: 10px; color: var(--text-dim); }

@@ -132,9 +132,7 @@ function finishSearch(outcome) {
     setStatus('Optimization complete');
   }
 
-  // Reset Update Search button
-  var updateBtn = $('btn-update-search');
-  if (updateBtn) { updateBtn.textContent = 'Update Search'; updateBtn.style.opacity = ''; }
+
 }
 
 export function cancelSearch() { S.searchCancel = true; setStatus('Cancelling...'); }
@@ -705,9 +703,6 @@ export function setupTradeoff() {
     if (tradeoffOpts) { tradeoffOpts.after(bhNote); }
   }
 
-  $('btn-update-search').addEventListener('click', () => {
-    rescoreAndDisplay(WEIGHT_PRESETS[S.weightPreset], S.method);
-  });
 }
 
 // ── Export ──
