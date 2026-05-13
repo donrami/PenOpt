@@ -420,19 +420,11 @@ textarea:focus-visible {
   width: 100%;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-left: 3px solid transparent;
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
   overflow: visible;
   flex-shrink: 0;
-  transition: border-left-color 200ms ease;
 }
-
-/* Sidebar card visual grouping — colored left border */
-.card--upload    { border-left-color: var(--accent); }
-.card--material  { border-left-color: var(--green-500); }
-.card--advanced  { border-left-color: var(--color-info); }
-.card--optimize  { border-left-color: var(--amber-500); }
 
 /* Card icon in header */
 .card-icon {
