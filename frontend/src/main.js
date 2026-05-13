@@ -112,9 +112,59 @@ function toggleFullscreen() {
 }
 
 function setupHelp() {
-  $('btn-help').addEventListener('click', () => animateModalOpen($('help-overlay')));
+  $('btn-help').addEventListener('click', () => {
+    animateModalOpen($('help-overlay'));
+    requestAnimationFrame(() => $('btn-help-close')?.focus());
+  });
   $('btn-help-close').addEventListener('click', () => animateModalClose($('help-overlay')));
   $('help-overlay').addEventListener('click', e => { if (e.target === $('help-overlay')) animateModalClose($('help-overlay')); });
+
+  // Focus trap — keeps keyboard navigation inside the open modal
+  $('help-overlay').addEventListener('keydown', function(e) {
+    if (e.key !== 'Tab') return;
+    const focusable = Array.from($('help-card').querySelectorAll(
+      'a[href], button:not([disabled]), input, [tabindex]:not([tabindex="-1"])'
+    )).filter(el => el.offsetParent !== null);
+    if (!focusable.length) return;
+    const first = focusable[0], last = focusable[focusable.length - 1];
+    if (e.shiftKey) {
+      if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+    } else {
+      if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  });
+}
+
+// SOD ≥ SDD guard — physically impossible; show inline validation
+function setupScannerValidation() {
+  const sddInput = $('cfg-sdd');
+  const sodInput = $('cfg-sod');
+  if (!sddInput || !sodInput) return;
+
+  let errorEl = null;
+
+  function validate() {
+    const sdd = parseFloat(sddInput.value) || 0;
+    const sod = parseFloat(sodInput.value) || 0;
+    if (sod >= sdd) {
+      if (!errorEl) {
+        errorEl = document.createElement('div');
+        errorEl.style.cssText = 'grid-column:1/-1;font-size:11px;color:var(--red-500);margin-top:var(--sp-1)';
+        errorEl.setAttribute('role', 'alert');
+        sodInput.closest('.scanner-grid').appendChild(errorEl);
+      }
+      errorEl.textContent = 'SOD must be less than SDD';
+      sddInput.style.borderColor = 'var(--red-500)';
+      sodInput.style.borderColor = 'var(--red-500)';
+    } else {
+      if (errorEl) { errorEl.remove(); errorEl = null; }
+      sddInput.style.borderColor = '';
+      sodInput.style.borderColor = '';
+    }
+  }
+
+  sddInput.addEventListener('input', validate);
+  sodInput.addEventListener('input', validate);
 }
 
 $('btn-error-dismiss').addEventListener('click', function() {
@@ -270,6 +320,7 @@ async function init() {
   setupTooltips();
   setupFileUpload(); setupSliders(); setupAccordion(); setupCardAccordion(); setupHelp(); setupKeyboard();
   setupScannerPresets(); setupTradeoff(); setupExport(); setupPlotTabs();
+  setupScannerValidation();
 
   // Material tabs
   qsa('.mat-tab').forEach(tab => {
@@ -296,6 +347,7 @@ async function init() {
   $('btn-labels').addEventListener('click', function() {
     S.labelsVisible = !S.labelsVisible;
     $('btn-labels').classList.toggle('active', S.labelsVisible);
+    $('btn-labels').setAttribute('aria-pressed', S.labelsVisible ? 'true' : 'false');
     if (S.labelsGroup) {
       S.labelsGroup.visible = S.labelsVisible;
       S.renderScene?.();
@@ -306,6 +358,7 @@ async function init() {
   $('btn-beam').addEventListener('click', function() {
     S.beamVisible = !S.beamVisible;
     $('btn-beam').classList.toggle('active', S.beamVisible);
+    $('btn-beam').setAttribute('aria-pressed', S.beamVisible ? 'true' : 'false');
     if (S.beamGroup) {
       S.beamGroup.visible = S.beamVisible;
       S.renderScene?.();
@@ -318,6 +371,9 @@ async function init() {
 
 
   // Results panel collapse toggle
+  const CHEV_DOWN = '<svg width="10" height="10" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M1 1l4 4 4-4"/></svg>';
+  const CHEV_UP   = '<svg width="10" height="10" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" style="transform:rotate(180deg)" aria-hidden="true"><path d="M1 1l4 4 4-4"/></svg>';
+
   const resultsPanel = $('results-panel');
   const resultsContent = $('results-content');
   const resultsCollapseBtn = $('results-collapse-btn');
@@ -325,14 +381,14 @@ async function init() {
     // Apply persisted collapsed state
     if (S.resultsCollapsed) {
       resultsContent.style.display = 'none';
-      resultsCollapseBtn.innerHTML = '&#x25B2;';
-      resultsCollapseBtn.title = 'Expand results';
+      resultsCollapseBtn.innerHTML = CHEV_UP;
+      resultsCollapseBtn.setAttribute('aria-label', 'Expand results');
     }
     resultsCollapseBtn.addEventListener('click', function() {
       S.resultsCollapsed = resultsContent.style.display !== 'none';
       resultsContent.style.display = S.resultsCollapsed ? 'none' : '';
-      resultsCollapseBtn.innerHTML = S.resultsCollapsed ? '&#x25B2;' : '&#x25BC;';
-      resultsCollapseBtn.title = S.resultsCollapsed ? 'Expand results' : 'Collapse results';
+      resultsCollapseBtn.innerHTML = S.resultsCollapsed ? CHEV_UP : CHEV_DOWN;
+      resultsCollapseBtn.setAttribute('aria-label', S.resultsCollapsed ? 'Expand results' : 'Collapse results');
       try { localStorage.setItem('penopt-results-collapsed', S.resultsCollapsed ? '1' : ''); } catch (_) {}
     });
     // Persist across sessions

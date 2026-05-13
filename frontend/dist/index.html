@@ -8,8 +8,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   <style>.hidden{display:none!important;visibility:hidden!important}.js-tooltip-active [data-tip]::after,.js-tooltip-active [data-tip]::before{display:none!important;content:none!important}</style>
-  <script type="module" crossorigin src="/assets/index.1c1b622b.js"></script>
-  <link rel="stylesheet" href="/assets/index.924635d2.css">
+  <script type="module" crossorigin src="/assets/index.04f7b9d5.js"></script>
+  <link rel="stylesheet" href="/assets/index.f57fd255.css">
 </head>
 <body>
   <div id="app">
@@ -24,7 +24,7 @@
         <span class="pill" id="pill-kev" data-tip="Beam effective energy" aria-label="Beam energy: -- keV">-- keV</span>
         <span class="pill" id="pill-tmin" data-tip="Min transmission Tmin" aria-label="Minimum transmission: -- Tmin">-- Tmin</span>
         <span class="pill" id="pill-eeff" data-tip="Effective energy after filter" aria-label="Effective energy: -- Eeff">-- Eeff</span>
-        <button class="icon-btn" id="btn-help" data-tip="Help & documentation">?</button>
+        <button class="icon-btn" id="btn-help" data-tip="Help &amp; documentation" aria-label="Help &amp; documentation">?</button>
       </div>
     </header>
 
@@ -36,7 +36,7 @@
     </div>
 
     <!-- ═══ CONFIRM DIALOG ═══ -->
-    <div id="confirm-overlay" class="hidden">
+    <div id="confirm-overlay" class="hidden" role="dialog" aria-modal="true" aria-labelledby="confirm-text">
       <div id="confirm-card">
         <div class="confirm-body">
           <div class="confirm-icon">
@@ -57,7 +57,7 @@
       <aside id="sidebar">
         <!-- Upload (always open) -->
         <section class="card" id="card-upload">
-          <h2 class="card-head"><svg class="card-icon" width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M7 1v9M3 5l4-4 4 4M2 10v2h10v-2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>Mesh <svg class="chevron" style="display:none" width="8" height="8" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l4 4 4-4"/></svg></h2>
+          <h2 class="card-head" aria-expanded="true"><svg class="card-icon" width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M7 1v9M3 5l4-4 4 4M2 10v2h10v-2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>Mesh <svg class="chevron" style="display:none" width="8" height="8" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l4 4 4-4"/></svg></h2>
           <div class="card-body">
             <div id="drop-zone">
               <svg width="28" height="28" viewBox="0 0 14 14" fill="none"><path d="M7 1v9M3 5l4-4 4 4M2 10v2h10v-2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -70,7 +70,7 @@
               <div class="fm-row"><span id="fm-tris"></span></div>
               <div class="fm-row"><span id="fm-bbox"></span></div>
               <div class="fm-row" id="fm-wt-row"><span class="dot-wrap" data-tip="Watertight"><span id="fm-dot" class="dot dot--green"></span></span><span id="fm-wt">watertight</span></div>
-              <div id="wt-sidebar-row" class="hidden"><span class="wt-icon">⚠</span><span id="wt-sidebar-text"></span></div>
+
               <button class="fm-remove" id="btn-remove">Remove</button>
             </div>
           </div>
@@ -78,7 +78,7 @@
 
         <!-- Material (accordion) -->
         <section class="card accordion open" id="card-material">
-          <h2 class="card-head"><svg class="card-icon" width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true"><circle cx="5" cy="5" r="4" stroke="currentColor" stroke-width="1.3"/><path d="M8 8l4 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>Material<span class="mat-subtitle" id="mat-subtitle"></span> <svg class="chevron open" width="8" height="8" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l4 4 4-4"/></svg></h2>
+          <h2 class="card-head" aria-expanded="true"><svg class="card-icon" width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true"><circle cx="5" cy="5" r="4" stroke="currentColor" stroke-width="1.3"/><path d="M8 8l4 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>Material<span class="mat-subtitle" id="mat-subtitle"></span> <svg class="chevron open" width="8" height="8" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l4 4 4-4"/></svg></h2>
           <div class="card-body" id="card-material-body">
             <div class="mat-tabs" id="mat-tabs">
               <button class="mat-tab active" data-cat="all">All</button>
@@ -107,12 +107,12 @@
 
         <!-- Advanced Controls (accordion, open by default) -->
         <section class="card accordion open" id="card-advanced">
-          <h2 class="card-head"><svg class="card-icon" width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true"><rect x="1" y="2" width="12" height="10" rx="2" stroke="currentColor" stroke-width="1.2"/><path d="M4 6v2M7 5v4M10 7v2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>Advanced Controls <svg class="chevron open" width="8" height="8" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l4 4 4-4"/></svg></h2>
+          <h2 class="card-head" aria-expanded="true"><svg class="card-icon" width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true"><rect x="1" y="2" width="12" height="10" rx="2" stroke="currentColor" stroke-width="1.2"/><path d="M4 6v2M7 5v4M10 7v2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>Advanced Controls <svg class="chevron open" width="8" height="8" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l4 4 4-4"/></svg></h2>
           <div class="card-body" id="body-advanced">
 
             <!-- Acc: Beam Energy -->
             <div class="acc">
-              <div class="acc-head" data-acc="beam">
+              <div class="acc-head" data-acc="beam" aria-expanded="false">
                 <span>Beam Energy</span>
                 <span class="acc-val" id="acc-beam-val">76 keV</span>
                 <svg class="acc-chev" width="8" height="8" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l4 4 4-4"/></svg>
@@ -133,7 +133,7 @@
 
             <!-- Acc: Pre-Filter -->
             <div class="acc">
-              <div class="acc-head" data-acc="filter">
+              <div class="acc-head" data-acc="filter" aria-expanded="false">
                 <span>Pre-Filter</span>
                 <span class="acc-val" id="acc-filter-val">None</span>
                 <svg class="acc-chev" width="8" height="8" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l4 4 4-4"/></svg>
@@ -151,14 +151,14 @@
 
             <!-- Acc: Scanner Geometry -->
             <div class="acc">
-              <div class="acc-head" data-acc="scanner">
+              <div class="acc-head" data-acc="scanner" aria-expanded="false">
                 <span>Scanner</span>
                 <span class="acc-val" id="acc-scanner-val">1000/700</span>
                 <svg class="acc-chev" width="8" height="8" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l4 4 4-4"/></svg>
               </div>
               <div class="acc-body" id="acc-scanner">
-                <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);display:block;margin-bottom:var(--sp-1)">Scanner Preset</label>
-                <select id="scanner-preset" style="width:100%;padding:4px 6px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);font-size:11px;margin-bottom:var(--sp-2)">
+                <label class="scanner-preset-label">Scanner Preset</label>
+                <select id="scanner-preset">
                   <option value="custom">Custom / Default</option>
                 </select>
                 <div class="scanner-grid">
@@ -170,16 +170,16 @@
                   <label>Pixels Y <input type="number" id="cfg-py" value="1024" min="64" max="4096" /></label>
                 </div>
                 <!-- T2.1: Ray Sampling slider -->
-                <div class="ctrl-group" style="margin-top:var(--sp-2)">
+                <div class="ctrl-group mt-2">
                   <div class="ctrl-label"><span>Ray Sampling</span><span class="ctrl-val" id="disp-raygrid">default</span></div>
                   <input type="range" id="sl-raygrid" min="4" max="32" step="4" value="0" />
-                  <div class="ctrl-hint" id="disp-raygrid-hint" style="font-size:9px;color:var(--text-dim)">8×8 coarse / 16×16 fine (default)</div>
+                  <div class="ctrl-hint" id="disp-raygrid-hint">8×8 coarse / 16×16 fine (default)</div>
                 </div>
                 <!-- Search range control -->
-                <div class="ctrl-group" style="margin-top:var(--sp-3)">
+                <div class="ctrl-group mt-3">
                   <div class="ctrl-label"><span>Search Range (±°)</span><span class="ctrl-val" id="disp-searchrange">45°</span></div>
                   <input type="range" id="cfg-searchrange" min="30" max="75" step="5" value="45" />
-                  <div class="ctrl-hint" style="font-size:9px;color:var(--text-dim)">Optimizer tilt/rotation limits. Extend range if optimum is near boundary.</div>
+                  <div class="ctrl-hint">Optimizer tilt/rotation limits. Extend range if optimum is near boundary.</div>
                 </div>
               </div>
             </div>
@@ -189,10 +189,10 @@
 
         <!-- Optimize (accordion) -->
         <section class="card accordion open" id="card-optimize">
-          <h2 class="card-head"><svg class="card-icon" width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M3 1v4a4 4 0 008 0V1M1 7a6 6 0 1012 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>Optimize <svg class="chevron open" width="8" height="8" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l4 4 4-4"/></svg></h2>
+          <h2 class="card-head" aria-expanded="true"><svg class="card-icon" width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M3 1v4a4 4 0 008 0V1M1 7a6 6 0 1012 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>Optimize <svg class="chevron open" width="8" height="8" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 1l4 4 4-4"/></svg></h2>
           <div class="card-body">
             <div class="opt-status" id="opt-status">
-              <span class="os-dot os-dot--idle" id="os-dot"></span>
+              <span class="os-dot os-dot--idle" id="os-dot" aria-hidden="true"></span>
               <span id="os-text">Upload a mesh and select a material</span>
             </div>
             <div id="grid-info" class="hidden">32&sup2; rays &middot; coarse + fine &middot; ~30s-2min</div>
@@ -212,7 +212,7 @@
           <div class="vp-progress hidden" id="vp-progress">
             <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
             <span class="progress-label" id="progress-label">0%</span>
-            <button class="btn btn-stop" id="btn-stop">&#x25A0; Stop</button>
+            <button class="btn btn-stop" id="btn-stop" aria-label="Stop optimization">&#x25A0; Stop</button>
           </div>
           <span style="flex:1"></span>
           <span class="hud-rot hidden" id="hud-rot">&theta;: 0&deg; &phi;: 0&deg;</span>
@@ -223,11 +223,11 @@
           </div>
           <span class="vp-divider"></span>
           <span class="vp-actions">
-            <button class="icon-btn" id="btn-labels" data-tip="Toggle 3D labels">
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h7l5 5-5 5H2V3z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><circle cx="5" cy="8" r="1.2" fill="currentColor"/></svg>
+            <button class="icon-btn" id="btn-labels" data-tip="Toggle 3D labels" aria-label="Toggle 3D labels" aria-pressed="false">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 3h7l5 5-5 5H2V3z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><circle cx="5" cy="8" r="1.2" fill="currentColor"/></svg>
             </button>
-            <button class="icon-btn" id="btn-beam" data-tip="Toggle beam geometry">
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="1.5" fill="currentColor"/><path d="M8 3v2.5M8 10.5V13M3 8h2.5m5 0H13" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <button class="icon-btn" id="btn-beam" data-tip="Toggle beam geometry" aria-label="Toggle beam geometry" aria-pressed="false">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="1.5" fill="currentColor"/><path d="M8 3v2.5M8 10.5V13M3 8h2.5m5 0H13" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
             </button>
             <button class="icon-btn" id="btn-reset-cam" data-tip="Reset camera (R)">
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 8a6 6 0 0111.2-2.8M14 8a6 6 0 01-11.2 2.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M13 2v3h-3M3 14v-3h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -284,7 +284,9 @@
         <div id="results-panel" class="hidden">
           <div id="results-header">
             <h3>Results</h3>
-            <button class="results-toggle" id="results-collapse-btn" title="Collapse results">&#x25BC;</button>
+            <button class="results-toggle" id="results-collapse-btn" aria-label="Collapse results">
+              <svg width="10" height="10" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M1 1l4 4 4-4"/></svg>
+            </button>
           </div>
           <div id="results-content">
             <div id="results-summary">
@@ -297,7 +299,7 @@
               <div class="rs-item"><span class="rs-lbl">Peak Path</span><span class="rs-val" id="rs-fenergy">--</span></div>
               <div class="rs-sep"></div>
               <div class="rs-item"><span class="rs-lbl">Tuy</span><span class="rs-val" id="rs-tuy">--</span></div>
-              <div class="rs-item" style="margin-left:auto"><span class="rs-lbl" id="rs-evals"></span></div>
+              <div class="rs-item ms-auto"><span class="rs-lbl" id="rs-evals"></span></div>
             </div>
             <div id="results-grid">
               <div class="res-card">
@@ -378,9 +380,9 @@
     </footer>
 
     <!-- Help modal -->
-    <div id="help-overlay" class="hidden">
+    <div id="help-overlay" class="hidden" role="dialog" aria-modal="true" aria-labelledby="help-title">
       <div id="help-card">
-        <div class="help-head">Help &amp; Documentation<button id="btn-help-close">&times;</button></div>
+        <div class="help-head"><span id="help-title">Help &amp; Documentation</span><button id="btn-help-close" aria-label="Close help">&times;</button></div>
         <div class="help-body" id="help-body">
             <h3>Overview</h3>
             <p>PenOpt finds the optimal tilt (θ) and rotation (φ) angles for scanning a part in an X-ray CT system. It casts rays through your 3D mesh, evaluates three objectives per orientation, and returns the best angles plus a kV recommendation.</p>

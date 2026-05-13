@@ -45,16 +45,14 @@ async function handleFile(file) {
     $('file-meta').classList.remove('hidden');
     $('drop-zone').classList.add('hidden');
     $('grid-info').classList.remove('hidden');
-    const wtDot = $('fm-dot'), wtText = $('fm-wt'), wtBanner = $('wt-banner'), wtRow = $('wt-sidebar-row'), wtRowText = $('wt-sidebar-text');
+    const wtDot = $('fm-dot'), wtText = $('fm-wt'), wtBanner = $('wt-banner');
     if (info.isWatertight) {
       wtDot.className = 'dot dot--green'; wtText.textContent = 'watertight';
-      wtBanner.classList.add('hidden'); wtRow.classList.add('hidden');
+      wtBanner.classList.add('hidden');
     } else {
       wtDot.className = 'dot dot--amber'; wtText.textContent = `${info.boundaryEdges} boundary edges — non-watertight`;
-      wtBanner.textContent = '⚠ Mesh has open edges — results may be unreliable';
+      wtBanner.innerHTML = '<svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true" style="flex-shrink:0"><path d="M7 1a6 6 0 100 12A6 6 0 007 1zm0 3v3m0 1.5v.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg> Mesh has open edges — penetration values may be underestimated';
       wtBanner.classList.remove('hidden');
-      wtRow.classList.remove('hidden');
-      wtRowText.textContent = 'Open edges — penetration values are underestimated';
     }
     $('os-text').textContent = 'Ready'; $('os-dot').className = 'os-dot os-dot--ready';
     setOptimizeBtnState({ enabled: true });
@@ -104,16 +102,14 @@ export async function handlePickedMesh(info) {
     $('file-meta').classList.remove('hidden');
     $('drop-zone').classList.add('hidden');
     $('grid-info').classList.remove('hidden');
-    const wtDot = $('fm-dot'), wtText = $('fm-wt'), wtBanner = $('wt-banner'), wtRow = $('wt-sidebar-row'), wtRowText = $('wt-sidebar-text');
+    const wtDot = $('fm-dot'), wtText = $('fm-wt'), wtBanner = $('wt-banner');
     if (info.isWatertight) {
       wtDot.className = 'dot dot--green'; wtText.textContent = 'watertight';
-      wtBanner.classList.add('hidden'); wtRow.classList.add('hidden');
+      wtBanner.classList.add('hidden');
     } else {
       wtDot.className = 'dot dot--amber'; wtText.textContent = info.boundaryEdges + ' boundary edges — non-watertight';
-      wtBanner.textContent = '⚠ Mesh has open edges — results may be unreliable';
+      wtBanner.innerHTML = '<svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true" style="flex-shrink:0"><path d="M7 1a6 6 0 100 12A6 6 0 007 1zm0 3v3m0 1.5v.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg> Mesh has open edges — penetration values may be underestimated';
       wtBanner.classList.remove('hidden');
-      wtRow.classList.remove('hidden');
-      wtRowText.textContent = 'Open edges — penetration values are underestimated';
     }
     $('os-text').textContent = 'Ready'; $('os-dot').className = 'os-dot os-dot--ready';
     setOptimizeBtnState({ enabled: true });
@@ -156,8 +152,6 @@ export async function removeMesh() {
   $('file-meta').classList.add('hidden'); $('drop-zone').classList.remove('hidden'); $('grid-info').classList.add('hidden'); $('results-panel').classList.add('hidden');
   $('wt-banner').classList.add('hidden');
   $('card-tradeoff').style.display = 'none'; $('heatmap-legend').classList.add('hidden');
-  const wtRow = $('wt-sidebar-row');
-  if (wtRow) wtRow.classList.add('hidden');
   // Clear result warnings
   [].slice.call(document.querySelectorAll('.result-warning')).forEach(el => el.remove());
   $('os-dot').className = 'os-dot os-dot--idle'; $('os-text').textContent = 'Upload a mesh and select a material';

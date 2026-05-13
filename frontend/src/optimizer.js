@@ -339,6 +339,7 @@ export function setupCardAccordion() {
     head.addEventListener('click', () => {
       const wasOpen = card.classList.contains('open');
       card.classList.toggle('open');
+      head.setAttribute('aria-expanded', wasOpen ? 'false' : 'true');
       const chev = head.querySelector('.chevron');
       if (chev) chev.classList.toggle('open');
 
@@ -371,9 +372,18 @@ export function setupCardAccordion() {
 // ── Accordion ──
 export function setupAccordion() {
   qsa('.acc-head').forEach(head => {
-    head.addEventListener('click', () => { head.parentElement.classList.toggle('open'); });
+    head.addEventListener('click', () => {
+      head.parentElement.classList.toggle('open');
+      head.setAttribute('aria-expanded', head.parentElement.classList.contains('open') ? 'true' : 'false');
+    });
   });
-  const a = document.querySelector('.acc'); if (a) a.classList.add('open');
+  // Open the first nested accordion by default and mark it expanded
+  const a = document.querySelector('.acc');
+  if (a) {
+    a.classList.add('open');
+    const firstHead = a.querySelector('.acc-head');
+    if (firstHead) firstHead.setAttribute('aria-expanded', 'true');
+  }
 }
 
 // ── Tradeoff ──

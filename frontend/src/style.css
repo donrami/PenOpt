@@ -17,7 +17,7 @@
   /* Text scale */
   --text: #dde0ed;
   --text-dim: #969ab0;
-  --text-muted: #787ca0;
+  --text-muted: #8b90aa;
 
   /* Accent (blue) */
   --accent: #3b82f6;
@@ -312,6 +312,7 @@ textarea:focus-visible {
 
 /* Icon buttons */
 .icon-btn {
+  position: relative;
   width: 28px; height: 28px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -725,6 +726,7 @@ textarea:focus-visible {
 }
 .ctrl-val { margin-left: auto; font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--text); line-height: var(--lh-tight); }
 .ctrl-unit { font-size: 10px; color: var(--text-muted); }
+.ctrl-hint { font-size: 11px; color: var(--text-dim); line-height: var(--lh-body); margin-top: var(--sp-1); }
 
 /* Preset buttons */
 .presets { display: flex; gap: var(--sp-1); margin-top: var(--sp-2); }
@@ -783,6 +785,21 @@ textarea:focus-visible {
   font-family: var(--mono);
 }
 .scanner-grid input:focus { outline: none; border-color: var(--accent); }
+
+/* Scanner preset label & select — replaces inline styles in HTML */
+.scanner-preset-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+  display: block;
+  margin-bottom: var(--sp-1);
+}
+#scanner-preset {
+  width: 100%;
+  margin-bottom: var(--sp-2);
+}
 
 /* ── SIDEBAR ERROR ── */
 #sidebar-error { /* placeholder for inline errors */ }
@@ -948,35 +965,39 @@ textarea:focus-visible {
 .ip-text { font-size: 16px; font-weight: 600; color: var(--text-dim); }
 .ip-formats { font-size: 11px; }
 
-/* Progress ring overlay */
+/* Progress ring — non-blocking corner HUD */
 #progress-ring {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  bottom: var(--sp-4);
+  left: var(--sp-4);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--sp-2);
+  gap: var(--sp-1);
   z-index: 20;
   pointer-events: none;
-  filter: drop-shadow(var(--shadow-lg));
+  background: rgba(12, 14, 20, 0.88);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-2) var(--sp-3);
+  box-shadow: var(--shadow-md);
 }
 #progress-ring.hidden { display: none; }
-.pr-svg { width: 100px; height: 100px; transform: rotate(-90deg); }
+.pr-svg { width: 64px; height: 64px; transform: rotate(-90deg); }
 .pr-track { fill: none; stroke: var(--surface2); stroke-width: 4; }
 .pr-fill { fill: none; stroke: var(--accent); stroke-width: 4; stroke-linecap: round; will-change: stroke-dashoffset; transition: stroke-dashoffset 300ms var(--ease-out); }
 .pr-pct {
   position: absolute;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
+  /* center over SVG: padding-top(8px) + half SVG height(32px) */
+  top: calc(var(--sp-2) + 32px);
+  left: 50%;
+  transform: translateX(-50%);
   font-family: var(--mono);
-  font-size: 22px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--accent);
-  /* Centered over the SVG ring */
 }
-.pr-info { font-size: 11px; color: var(--text-dim); text-align: center; max-width: 120px; }
+.pr-info { font-size: 10px; color: var(--text-dim); text-align: center; max-width: 100px; padding: var(--sp-1) 0; }
 
 /* Heatmap legend */
 #heatmap-legend {
@@ -1367,6 +1388,11 @@ textarea:focus-visible {
 /* ── Tooltips ── */
 [data-tip] {
   position: relative;
+  /* cursor not set here — interactive elements keep cursor:pointer */
+}
+/* Informational (non-interactive) elements get cursor:help */
+.pill[data-tip],
+.dot-wrap[data-tip] {
   cursor: help;
 }
 /* CSS tooltip fallback (used when JS tooltip system is unavailable) */
@@ -1554,19 +1580,39 @@ textarea:focus-visible {
   to { opacity: 0; transform: scale(0.95); }
 }
 
-#help-overlay,
-#confirm-overlay {
-  animation: fadeScaleIn 200ms ease-out both;
+@keyframes backdropFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes backdropFadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
 }
 
+/* Backdrop dims; the card inside scales — correct layer separation */
+#help-overlay,
+#confirm-overlay {
+  animation: backdropFadeIn 200ms ease-out both;
+}
+#help-card,
+#confirm-card {
+  animation: fadeScaleIn 200ms ease-out both;
+}
 #help-overlay.modal-closing,
 #confirm-overlay.modal-closing {
+  animation: backdropFadeOut 180ms ease-in both;
+}
+#help-overlay.modal-closing #help-card,
+#confirm-overlay.modal-closing #confirm-card {
   animation: fadeScaleOut 180ms ease-in both;
 }
 
 @media (prefers-reduced-motion: reduce) {
   #help-overlay, #help-overlay.modal-closing,
-  #confirm-overlay, #confirm-overlay.modal-closing {
+  #confirm-overlay, #confirm-overlay.modal-closing,
+  #help-card, #confirm-card,
+  #help-overlay.modal-closing #help-card,
+  #confirm-overlay.modal-closing #confirm-card {
     animation: none !important;
   }
 }
@@ -1635,3 +1681,4 @@ textarea:focus-visible {
 .text-info    { color: var(--color-info); }
 .bg-info-tint { background: var(--color-info-tint); }
 .border-info  { border-color: var(--color-info); }
+.ms-auto      { margin-left: auto; }
