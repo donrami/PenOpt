@@ -5,6 +5,30 @@ All notable changes to PenOpt will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-05-14
+
+### Changed
+
+- Redesigned design system: migrated from hex/rgba to OKLCH colors
+  with unified 275° hue cast for consistent cool-blue palette
+- Swapped Inter + JetBrains Mono fonts for Geist + Geist Mono
+- Rewrote help modal with practical CT technician guidance
+  (Quick Start, Reading the Results, When to Worry)
+- Applied humanizer pass to remove AI writing patterns from help text
+
+### Added
+
+- 57 science-grounded tooltips across results panel, sidebar controls,
+  scanner geometry with physics explanations and citations
+- Dynamic data-tip attributes for material grid, filter items, preset buttons
+- Beam-hardening shift and HVL Cu display to filter stats
+
+### Fixed
+
+- Tooltip text wrapping: now uses white-space:normal with 11px/1.5 line-height
+- Build errors in plots.js: duplicate var/const declarations and exports
+- Removed self-explanatory tooltips that duplicated visible UI labels
+
 ## [0.1.0] - 2026-05-10
 
 ### Added
