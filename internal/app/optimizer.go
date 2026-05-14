@@ -71,7 +71,7 @@ func (opt *Optimizer) Run(ctx context.Context, req RunRequest) (string, error) {
 	go func() {
 		searchStart := time.Now()
 
-		result, err := search.Run(bvhTree, m, coarseCfg, req.Weights, req.Method,
+		result, err := search.Run(context.Background(), bvhTree, m, coarseCfg, req.Weights, req.Method,
 			func(idx, total int, theta, phi float64) {
 				pct := float64(idx) / float64(total) * 100
 				var estRemainingMs int64 = 0

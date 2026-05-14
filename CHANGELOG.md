@@ -5,6 +5,28 @@ All notable changes to PenOpt will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-05-15
+
+### Added
+
+- **MCP server** (`penopt-mcp`): headless binary for AI assistant integration
+  - `load_mesh` — load STL/OBJ files, parse, center, build BVH, return metadata
+  - `get_mesh_info` — return mesh metadata without reloading
+  - `evaluate_orientation` — score a single (θ, φ) orientation
+  - `run_optimization` — full coarse→fine grid search with progress notifications
+  - Context cancellation: search stops cleanly if client disconnects
+  - Progress sent via MCP notifications and stderr
+  - Input validation with LLM-friendly error messages
+- GitHub Actions CI/CD for MCP server:
+  - `ci.yml` — build + test + vet on every push and PR
+  - `release.yml` — cross-compile MCP binaries for linux, windows, darwin (amd64 + arm64)
+  - 8 binaries per release: 4 GUI + 4 MCP
+
+### Changed
+
+- Bumped minimum Go version from 1.23 to 1.25 (required by go-sdk dependency)
+- `search.Run()` now accepts `context.Context` for cancellation support
+
 ## [0.2.0] - 2026-05-14
 
 ### Changed

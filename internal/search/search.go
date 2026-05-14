@@ -4,6 +4,7 @@
 package search
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"sort"
@@ -157,10 +158,16 @@ type ProgressFn func(idx, total int, theta, phi float64)
 // m is the mesh used for Tuy completeness computation.
 // rayGridOverride: if > 0, overrides coarse ray grid (fine = min(override*2, 32)).
 // searchRange: degrees, 0 = default 45°.
-func Run(bvhTree *bvh.BVH, m *mesh.Mesh, cfg raycaster.ScannerConfig,
+// ctx controls cancellation: pass context.Background() for no timeout.
+func Run(ctx context.Context, bvhTree *bvh.BVH, m *mesh.Mesh, cfg raycaster.ScannerConfig,
 	weights [5]float64, method string, onProgress ProgressFn, rayGridOverride int, searchRange int) (*Result, error) {
 
 	startTime := time.Now()
+
+	// Check for cancellation before starting
+	if err := ctx.Err(); err != nil {
+		return nil, fmt.Errorf("optimization cancelled: %w", err)
+	}
 
 	// Resolve and validate search range
 	if searchRange <= 0 {
@@ -215,6 +222,11 @@ func Run(bvhTree *bvh.BVH, m *mesh.Mesh, cfg raycaster.ScannerConfig,
 
 	if len(coarseRaws) < 2 {
 		return nil, nil
+	}
+
+	// Check for cancellation before starting fine phase
+	if err := ctx.Err(); err != nil {
+		return nil, fmt.Errorf("optimization cancelled during coarse phase: %w", err)
 	}
 
 	// Build coarse score map for convergence comparison (T2.3)

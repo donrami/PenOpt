@@ -8,6 +8,7 @@ import (
 	"penopt/internal/mesh"
 	"penopt/internal/objectives"
 	"penopt/internal/raycaster"
+	"context"
 )
 
 // buildTestMesh creates a simple box-like mesh for testing.
@@ -69,7 +70,7 @@ func TestRun_ReturnsResult(t *testing.T) {
 	cfg.RayGridY = 4
 	cfg.NumProjections = 8
 
-	result, err := Run(bvhTree, m, cfg, [5]float64{0.4, 0.3, 0.15, 0.1, 0.05}, "weighted", nil, 0, 0)
+	result, err := Run(context.Background(), bvhTree, m, cfg, [5]float64{0.4, 0.3, 0.15, 0.1, 0.05}, "weighted", nil, 0, 0)
 	if err != nil {
 		t.Fatalf("Run() returned error: %v", err)
 	}
@@ -136,7 +137,7 @@ func TestRun_WithMesh_ComputesTuy(t *testing.T) {
 	cfg.RayGridY = 4
 	cfg.NumProjections = 8
 
-	result, err := Run(bvhTree, m, cfg, [5]float64{0.4, 0.3, 0.15, 0.1, 0.05}, "weighted", nil, 0, 0)
+	result, err := Run(context.Background(), bvhTree, m, cfg, [5]float64{0.4, 0.3, 0.15, 0.1, 0.05}, "weighted", nil, 0, 0)
 	if err != nil {
 		t.Fatalf("Run() returned error: %v", err)
 	}
@@ -278,7 +279,7 @@ func TestRunWithFaceCentroid_SmallPart(t *testing.T) {
 	cfg.RayGridY = 8
 	cfg.NumProjections = 8
 
-	result, err := Run(bvhTree, m, cfg, [5]float64{0.4, 0.3, 0.15, 0.1, 0.05}, "weighted", nil, 0, 0)
+	result, err := Run(context.Background(), bvhTree, m, cfg, [5]float64{0.4, 0.3, 0.15, 0.1, 0.05}, "weighted", nil, 0, 0)
 	if err != nil {
 		t.Fatalf("Run() returned error: %v", err)
 	}
@@ -303,7 +304,7 @@ func TestSearch_FindsCubeFaceOn(t *testing.T) {
 	cfg.RayGridY = 32
 	cfg.NumProjections = 36
 
-	result, err := Run(bvhTree, m, cfg, [5]float64{0.3, 0.4, 0.2, 0.05, 0.05}, "weighted", nil, 0, 0)
+	result, err := Run(context.Background(), bvhTree, m, cfg, [5]float64{0.3, 0.4, 0.2, 0.05, 0.05}, "weighted", nil, 0, 0)
 	if err != nil {
 		t.Fatalf("Run() returned error: %v", err)
 	}

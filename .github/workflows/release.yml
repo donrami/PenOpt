@@ -9,6 +9,7 @@ permissions:
   contents: write
 
 jobs:
+  # ── GUI: Linux ──
   build-linux:
     runs-on: ubuntu-22.04
     steps:
@@ -16,7 +17,7 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: '1.25'
 
       - uses: actions/setup-node@v4
         with:
@@ -47,6 +48,7 @@ jobs:
           name: penopt-linux
           path: build/bin/penopt-linux-amd64
 
+  # ── GUI: Windows ──
   build-windows:
     runs-on: ubuntu-22.04
     steps:
@@ -54,7 +56,7 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: '1.25'
 
       - uses: actions/setup-node@v4
         with:
@@ -85,6 +87,7 @@ jobs:
           name: penopt-windows
           path: build/bin/penopt-windows-amd64.exe
 
+  # ── GUI: macOS ──
   build-macos:
     strategy:
       matrix:
@@ -95,7 +98,7 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: '1.25'
 
       - uses: actions/setup-node@v4
         with:
@@ -121,8 +124,46 @@ jobs:
           name: penopt-macos-${{ matrix.arch }}
           path: build/bin/penopt-darwin-${{ matrix.arch }}
 
+  # ── MCP Server: cross-compile from a single ubuntu runner ──
+  build-mcp:
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            ext: ""
+          - goos: windows
+            goarch: amd64
+            ext: ".exe"
+          - goos: darwin
+            goarch: amd64
+            ext: ""
+          - goos: darwin
+            goarch: arm64
+            ext: ""
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache-dependency-path: go.sum
+
+      - name: Build MCP binary
+        run: |
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} \
+            go build -o penopt-mcp-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }} \
+            ./cmd/penopt-mcp
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: penopt-mcp-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: penopt-mcp-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}
+
+  # ── Create GitHub Release ──
   release:
-    needs: [build-linux, build-windows, build-macos]
+    needs: [build-linux, build-windows, build-macos, build-mcp]
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -147,17 +188,46 @@ jobs:
           name: penopt-macos-arm64
           path: artifacts/
 
+      - uses: actions/download-artifact@v4
+        with:
+          name: penopt-mcp-linux-amd64
+          path: artifacts/
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: penopt-mcp-windows-amd64
+          path: artifacts/
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: penopt-mcp-darwin-amd64
+          path: artifacts/
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: penopt-mcp-darwin-arm64
+          path: artifacts/
+
       - name: Generate release notes
         run: |
           cat > release-notes.md << 'EOF'
           ## Downloads
 
+          ### Desktop App (GUI)
           | Platform | Arch | Binary |
           |---|---|---|
           | Linux | amd64 | `penopt-linux-amd64` |
           | Windows | amd64 | `penopt-windows-amd64.exe` |
           | macOS | Intel | `penopt-darwin-amd64` |
           | macOS | Apple Silicon | `penopt-darwin-arm64` |
+
+          ### MCP Server (AI Assistant Integration)
+          | Platform | Arch | Binary |
+          |---|---|---|
+          | Linux | amd64 | `penopt-mcp-linux-amd64` |
+          | Windows | amd64 | `penopt-mcp-windows-amd64.exe` |
+          | macOS | Intel | `penopt-mcp-darwin-amd64` |
+          | macOS | Apple Silicon | `penopt-mcp-darwin-arm64` |
 
           Full changelog: https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md
           EOF
@@ -173,3 +243,7 @@ jobs:
             artifacts/penopt-windows-amd64.exe
             artifacts/penopt-darwin-amd64
             artifacts/penopt-darwin-arm64
+            artifacts/penopt-mcp-linux-amd64
+            artifacts/penopt-mcp-windows-amd64.exe
+            artifacts/penopt-mcp-darwin-amd64
+            artifacts/penopt-mcp-darwin-arm64
