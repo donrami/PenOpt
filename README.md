@@ -119,6 +119,34 @@ The UI uses a dark theme with Inter and JetBrains Mono, material filter tabs wit
 
 ---
 
+## AI Integration (MCP)
+
+PenOpt ships a headless **MCP server** that lets AI assistants like Claude load meshes and run CT orientation optimization directly. Your mesh data never leaves your machine — communication is over local stdin/stdout.
+
+```bash
+# Download penopt-mcp from the latest release, then configure:
+claude mcp add penopt -- /usr/local/bin/penopt-mcp
+```
+
+Then just ask:
+
+> *"Load /home/user/part.stl and find the optimal CT scan orientation."*
+
+**Supported clients:** Claude Desktop, Claude Code, and any MCP-compatible AI client.
+
+[Full setup guide →](cmd/penopt-mcp/README.md)
+
+### Available Tools
+
+| Tool | What it does |
+|---|---|
+| `load_mesh` | Load STL/OBJ file, parse, center, build BVH |
+| `get_mesh_info` | Return mesh metadata |
+| `evaluate_orientation` | Score a single (θ, φ) orientation |
+| `run_optimization` | Full coarse→fine grid search with diagnostics |
+
+---
+
 ## Worked Example
 
 > **Scenario:** A 50 mm Inconel 718 turbine blade, scanned at 450 kV with a 1 mm Cu pre-filter on a Nikon XTH 225. The default orientation (as-printed, upright) yields a maximum X-ray path length of ~85 mm through the thickest cross-section.
