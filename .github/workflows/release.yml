@@ -111,7 +111,7 @@ jobs:
       - name: Build binary
         run: |
           export PATH="$HOME/go/bin:$PATH"
-          wails build -platform darwin/${{ matrix.arch }} -clean
+          wails build -platform darwin/${{ matrix.arch }} -clean -nopackage
 
       - name: Rename binary
         run: mv build/bin/penopt build/bin/penopt-darwin-${{ matrix.arch }}
