@@ -346,21 +346,24 @@ func handleRunOptimization(ctx context.Context, req *mcp.CallToolRequest, in Run
 	cfg.RayGridY = 8
 	cfg.NumProjections = 36
 
-	// Build progress callback that sends MCP notifications
+	// Build progress callback that sends MCP notifications and logs to stderr
 	onProgress := func(idx, total int, theta, phi float64) {
-		sess := currentSession()
-		if sess == nil {
-			return
-		}
 		pct := float64(idx) / float64(total) * 100
-		_ = sess.NotifyProgress(ctx, &mcp.ProgressNotificationParams{
-			ProgressToken: nil, // no progress token from caller
-			Progress:      float64(idx) / float64(total),
-			Message:       fmt.Sprintf("Evaluating θ=%.0f° φ=%.0f° (%d/%d, %.0f%%)", theta, phi, idx, total, pct),
-		})
+		msg := fmt.Sprintf("PenOpt: θ=%.0f° φ=%.0f° (%d/%d, %.0f%%)", theta, phi, idx, total, pct)
+		// Stderr fallback — visible in any terminal / Claude log
+		fmt.Fprintln(os.Stderr, msg)
+		// MCP progress notification for clients that support it
+		sess := currentSession()
+		if sess != nil {
+			_ = sess.NotifyProgress(ctx, &mcp.ProgressNotificationParams{
+				ProgressToken: nil,
+				Progress:      float64(idx) / float64(total),
+				Message:       msg,
+			})
+		}
 	}
 
-	result, err := search.Run(bvhTree, m, cfg, weights, method, onProgress, rayGridXY, searchRange)
+	result, err := search.Run(ctx, bvhTree, m, cfg, weights, method, onProgress, rayGridXY, searchRange)
 	if err != nil {
 		return nil, optimizationResult{}, fmt.Errorf("optimization failed: %w", err)
 	}
