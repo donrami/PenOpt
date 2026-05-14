@@ -2,8 +2,7 @@
 
 > **Find the optimal orientation for industrial X-ray CT scanning.** Load a 3D mesh (STL/OBJ), configure beam energy and scanner geometry, and search over tilt/rotation angles to minimize penetration path length, energy requirements, and cone-beam artifacts.
 
-<!-- Screenshot: add `./docs/screenshot.png` and remove this comment -->
-<!-- ![PenOpt UI](./docs/screenshot.png) -->
+![PenOpt UI showing the main layout with 3D viewport, results panel, and sidebar controls](./docs/readme_image.png)
 
 [![Release v0.2.0](https://img.shields.io/badge/release-v0.2.0-blue?style=flat-square)](https://github.com/donrami/PenOpt/releases/tag/v0.2.0)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
