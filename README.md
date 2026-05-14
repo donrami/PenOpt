@@ -5,7 +5,7 @@
 <!-- Screenshot: add `./docs/screenshot.png` and remove this comment -->
 <!-- ![PenOpt UI](./docs/screenshot.png) -->
 
-[![Release v0.1.0](https://img.shields.io/badge/release-v0.1.0-blue?style=flat-square)](https://github.com/donrami/PenOpt)
+[![Release v0.2.0](https://img.shields.io/badge/release-v0.2.0-blue?style=flat-square)](https://github.com/donrami/PenOpt/releases/tag/v0.2.0)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 [![Go 1.23+](https://img.shields.io/badge/Go-1.23+-00ADD8?style=flat-square&logo=go)](https://go.dev/dl/)
 
@@ -39,7 +39,7 @@
 
 ### Prebuilt Binaries
 
-Prebuilt binaries for Windows, macOS, and Linux will be published on the [Releases page](https://github.com/donrami/PenOpt/releases). Until then you'll need to build from source.
+Prebuilt binaries for **Windows** and **Linux** are available on the [Releases page](https://github.com/donrami/PenOpt/releases/tag/v0.2.0). macOS builds require a Mac with Xcode — see [build from source](#build-from-source) below.
 
 ### Build from Source
 
