@@ -39,7 +39,7 @@
 
 ### Prebuilt Binaries
 
-Prebuilt binaries for **Windows** and **Linux** are available on the [Releases page](https://github.com/donrami/PenOpt/releases/tag/v0.2.0). macOS builds require a Mac with Xcode — see [build from source](#build-from-source) below.
+Prebuilt binaries for **Windows**, **macOS** (Intel + Apple Silicon), and **Linux** are built automatically by CI when a new tag is pushed. See the [Releases page](https://github.com/donrami/PenOpt/releases) for the latest downloads.
 
 ### Build from Source
 
